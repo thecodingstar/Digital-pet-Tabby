@@ -50,8 +50,12 @@ class MascotWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         w, h = 120, 60
-        x = tb_left + tb_w - w - 10
+        x = max(tb_left + 10, tb_left + tb_w - w - 10)  # Clamp to taskbar bounds
         y = tb_top + 5
+
+        # Debug: log position
+        with open(Path.home() / "mascot_position.log", "a") as f:
+            f.write(f"Taskbar: {(tb_left, tb_top, tb_w, tb_h)}, Window pos: ({x}, {y})\n")
 
         self.setGeometry(x, y, w, h)
         self.emotion = "idle"

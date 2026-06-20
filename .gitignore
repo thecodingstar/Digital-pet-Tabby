@@ -12,6 +12,11 @@ preview_*.png
 # --- runtime / logs ---
 *.log
 mascot_config.json
+cat_config.json
+cat_state.json
+cat_brain.json
+.env
+.env.local
 statusline/state/
 
 # --- python ---
@@ -27,3 +32,4 @@ env/
 .idea/
 Thumbs.db
 .DS_Store
+.mascot_stop

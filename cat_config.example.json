@@ -1,0 +1,18 @@
+{
+  "_comment": "EASIEST: put GROQ_API_KEY in a .env file (see .env.example). This JSON is an alternative for non-Groq / OpenAI-compatible providers: copy to cat_config.json (gitignored) and add your key.",
+  "_recommended": "Groq is free + fastest. Get a key at https://console.groq.com/keys",
+  "base_url": "https://api.groq.com/openai/v1",
+  "api_key": "PASTE_YOUR_KEY_HERE",
+  "model": "llama-3.3-70b-versatile",
+
+  "_alt_nvidia": {
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "model": "meta/llama-3.3-70b-instruct",
+    "key_url": "https://build.nvidia.com"
+  },
+  "_alt_openrouter": {
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "key_url": "https://openrouter.ai/keys"
+  }
+}
