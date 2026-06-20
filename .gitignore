@@ -1,0 +1,29 @@
+# --- generated art / reference images (kept local, not in git) ---
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+Cat examples/
+cat2_states/
+cat3_states/
+preview_*.png
+
+# --- runtime / logs ---
+*.log
+mascot_config.json
+statusline/state/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- editor / os ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

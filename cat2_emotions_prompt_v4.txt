@@ -1,0 +1,127 @@
+==============================================================================
+IMAGE-GEN PROMPT v4 — Cat-2 emotion + smooth-walk sprite sheet
+Use WITH the reference image:  Cat examples/Cat-2.webp
+==============================================================================
+
+WHY v4 (fixes over the GG_2 / v3 render so the auto-cutout comes out CLEAN):
+  1) BIG EVEN GUTTERS between cells + each cat well inside its cell, never
+     touching edges or neighbors — so slicing each cell never clips a cat.
+  2) A CLEAR EMPTY GAP between each cat and its label text below it, with the
+     label in its own bottom band — so dropping the label strip never cuts the
+     cat, and the label never bleeds into the cat.
+  3) BACKGROUND = ONE FLAT SOLID COLOR (pure magenta #FF00FF), NOT a
+     checkerboard. The previous "transparent" checkerboard was actually painted
+     pixels in two gray shades that fought the cutout. A single flat color the
+     cat never uses keys out perfectly.
+  4) SMOOTHER WALK = an 8-FRAME walk cycle (more contact/passing poses).
+  5) Output a PNG file.
+
+------------------------------------------------------------------------------
+MAIN PROMPT  (paste this; attach Cat-2.webp as the character/style reference)
+------------------------------------------------------------------------------
+A pixel-art sprite sheet (PNG) of the SAME single orange tabby cat from the
+reference image, cloned in the EXACT same art style across every cell. ONE
+specific cat, perfectly consistent — only POSE and FACIAL EXPRESSION change.
+
+Lock these character details in EVERY cell (do NOT drift or simplify):
+ - Warm orange base fur with darker orange TABBY STRIPES on back, head, tail.
+ - CREAM markings: cream muzzle, cream chest, cream paws/socks, cream inner
+   ears. (Do not make the cat solid orange.)
+ - Thick, even, dark navy-blue outline around the whole body.
+ - Same eye style with small white eye-glints, same chunky 16-bit pixel size.
+
+BACKGROUND — CRITICAL FOR CLEAN CUTOUT:
+ - The ENTIRE background is ONE FLAT SOLID COLOR: pure magenta #FF00FF.
+ - NO checkerboard, NO two-tone "transparency" pattern, NO gradient, NO
+   shadow, NO grid lines. Magenta must NOT appear anywhere on the cat.
+ - (If the tool can export real alpha transparency instead, that is also fine —
+   but never a checkerboard pattern.)
+
+SPACING & LAYOUT — CRITICAL FOR CLEAN CUTOUT:
+ - Neat uniform grid, 6 columns. Every cell the SAME size.
+ - BIG, EQUAL gutters of background between every cell (gutter at least ~15%
+   of the cell width). Cells clearly separated.
+ - Inside each cell: the cat sits in the UPPER ~65% of the cell, centered
+   left-to-right, with a comfortable empty margin on all sides — the cat must
+   NOT touch the cell edges or any neighbor.
+ - Below the cat, leave a CLEAR EMPTY GAP (~10% of cell height), THEN the
+   label text in the bottom band (~20% of cell height). The label is small,
+   centered, one short line, fully inside its own cell, not touching the cat
+   above it or any neighboring cell.
+ - All cats the SAME scale, standing on the SAME baseline, ALL FACING RIGHT,
+   consistent side / three-quarter view.
+
+CELLS (fill row by row, left to right):
+
+WALK CYCLE — 8 frames, facing right. Head & face identical and neutral across
+all 8; ONLY the legs and body height change so it loops as one smooth walk
+(1 -> 2 -> ... -> 8 -> 1):
+ 1.  WALK CONTACT A  - front-right paw reaching forward, back-left paw pushed
+                       back, both touching ground, body mid height.
+ 2.  WALK DOWN A     - weight drops onto the planted legs, body LOWEST.
+ 3.  WALK PASS A     - rear leg swings forward under body, one paw lifted,
+                       body rising.
+ 4.  WALK HIGH A     - mid passing, body at its HIGHEST, opposite paws lifting.
+ 5.  WALK CONTACT B  - mirrored stride: front-left paw forward, back-right back,
+                       both grounded, body mid height.
+ 6.  WALK DOWN B     - weight drops, body LOWEST.
+ 7.  WALK PASS B     - other rear leg swings under, paw lifted, body rising.
+ 8.  WALK HIGH B     - body at its HIGHEST again.
+
+EMOTIONS / STATES (one per cell after the walk frames):
+ 9.  IDLE        - standing calm, neutral relaxed face, tail resting low.
+ 10. IDLE BLINK  - same as idle but eyes closed (single blink frame).
+ 11. SITTING     - sitting upright, tail curled around front paws, content.
+ 12. SLEEPING    - curled in a loaf, eyes closed, small "Zzz" above the head.
+ 13. STRETCH     - front legs stretched forward, back arched, big yawn.
+ 14. ALERT       - ears perked up, head high, attentive, staring ahead.
+ 15. HAPPY       - tail straight up, bright eyes, open smiling mouth.
+ 16. LOVE        - heart-shaped eyes, a couple tiny floating hearts, blissful.
+ 17. THINKING    - head tilted up, one front paw raised, small "?" above head.
+ 18. CURIOUS     - ears forward, leaning in, sniffing, intrigued look.
+ 19. PLAYFUL     - crouched pounce, rear raised, one paw batting forward.
+ 20. PROUD/DONE  - sitting tall, eyes happily closed, smug little smile.
+ 21. ANGRY       - arched back, bristled fur, ears flat back, hissing mouth.
+ 22. HUNGRY      - crouched low, drooling, big pleading eyes, licking lips.
+ 23. SAD         - ears drooped, big watery eyes, two blue tear drops.
+ 24. SCARED      - startled jump, wide round eyes, "!" above head.
+ 25. SURPRISED   - sudden double-take, big round eyes, small "o" mouth.
+ 26. GRUMPY      - half-lidded annoyed eyes, flat mouth, ears slightly back.
+
+(26 cells = 6 columns x 5 rows; leave the final 4 cells of the last row EMPTY
+ — just flat magenta background, no cat.)
+
+------------------------------------------------------------------------------
+HARD CONSTRAINTS (do NOT drift)
+------------------------------------------------------------------------------
+- 26 identical-character clones: same breed, colors, cream markings, stripes,
+  outline thickness, and SAME SIZE in every cell. Only pose + expression vary.
+- Walk frames 1-8: identical head/face, ONLY legs + body height change.
+- Crisp hard pixels: NO anti-aliasing, NO soft shading, NO blur, NO gradients.
+- Background is flat solid magenta #FF00FF everywhere except the cats.
+- BIG even gutters between cells; clear empty gap between each cat and its
+  label; nothing touching cell edges.
+- Export as a PNG file.
+
+------------------------------------------------------------------------------
+NEGATIVE PROMPT
+------------------------------------------------------------------------------
+checkerboard background, two-tone transparency pattern, gray background,
+gradient, shadow, grid lines, cramped spacing, cats touching cell edges, cats
+touching each other, label overlapping the cat, tight margins, blurry,
+anti-aliased, soft shading, 3d render, realistic fur, solid-orange cat with no
+cream markings, missing stripes, thin/inconsistent outline, cats facing
+different directions, varying sizes, misaligned baseline, magenta on the cat,
+multiple cats per cell, cropped cats, jpeg/webp artifacts, watermark.
+
+------------------------------------------------------------------------------
+DELIVERY / NOTES
+------------------------------------------------------------------------------
+- Output ONE PNG, 6 columns, magenta #FF00FF flat background, big gutters,
+  labels in their own bottom band with a clear gap above them.
+- For max crispness you can generate ONE ROW (6 cells) per image on the same
+  flat magenta and I will stack them.
+- Save as  cat2_states_v4.png  in this folder. Tell me the grid (cols x rows)
+  and the background color. I'll chroma-key the magenta, slice the grid, drop
+  the label band, and wire the 8-frame walk for smoother motion.
+==============================================================================
