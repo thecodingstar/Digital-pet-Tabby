@@ -96,13 +96,19 @@ def stop(proc):
             proc.kill()
 
 
+CRASH_WINDOW = 3.0     # exit sooner than this after launch == a crash
+MAX_FAILS = 5          # consecutive fast crashes before we pause relaunching
+
+
 def main():
     if not TARGET.exists():
         sys.exit(f"[run_mascot] not found: {TARGET}")
     stop_file = HERE / ".mascot_stop"
     stop_file.unlink(missing_ok=True)        # clear any stale sentinel
     proc = launch()
+    started = time.time()
     last = snapshot()
+    fails = 0
     try:
         while True:
             time.sleep(POLL)
@@ -110,16 +116,31 @@ def main():
                 print("[run_mascot] stop requested", flush=True)
                 stop_file.unlink(missing_ok=True)
                 break
+
             cur = snapshot()
-            if cur != last:
+            if cur != last:                  # code changed -> restart, clear backoff
                 print("[run_mascot] change detected -> restarting", flush=True)
                 stop(proc)
                 proc = launch()
+                started = time.time()
                 last = cur
-            elif proc.poll() is not None:
-                # mascot exited on its own (e.g. crash) -> relaunch
-                print("[run_mascot] mascot exited -> relaunching", flush=True)
+                fails = 0
+                continue
+
+            if proc is not None and proc.poll() is not None:
+                uptime = time.time() - started
+                fails = fails + 1 if uptime < CRASH_WINDOW else 0
+                if fails >= MAX_FAILS:
+                    print(f"[run_mascot] mascot crashed {fails}x fast; pausing "
+                          f"relaunch. Edit a watched file to retry.", flush=True)
+                    proc = None              # stop relaunching until a file change
+                    continue
+                backoff = min(30, 2 ** fails) if fails else 0
+                print(f"[run_mascot] mascot exited (up {uptime:.1f}s) -> "
+                      f"relaunch in {backoff}s (fail {fails})", flush=True)
+                time.sleep(backoff)
                 proc = launch()
+                started = time.time()
     except KeyboardInterrupt:
         print("\n[run_mascot] stopping")
     finally:

@@ -10,8 +10,9 @@ Run: python taskbar_mascot_cat.py
 import sys, time, ctypes, ctypes.wintypes, json, os, glob, random
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication, QWidget, QMenu
-from PyQt5.QtCore import Qt, QTimer, QPoint, QRect
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont, QFontMetrics, QPainterPath, QPen
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import (QPixmap, QPainter, QColor, QFont, QFontMetrics,
+                         QPainterPath, QPen, QRegion)
 from brain import Brain
 from chatter import Cat
 
@@ -70,15 +71,20 @@ class APPBARDATA(ctypes.Structure):
                 ("lParam", ctypes.wintypes.LPARAM)]
 
 
+ABE_TOP, ABE_BOTTOM = 1, 3
+
+
 def get_taskbar_rect():
+    """Return (left, top, width, height, edge). edge is ABE_* (which screen
+    side the taskbar is docked to)."""
     try:
         abd = APPBARDATA()
         abd.cbSize = ctypes.sizeof(APPBARDATA)
         ctypes.windll.shell32.SHAppBarMessage(ABM_GETTASKBARPOS, ctypes.byref(abd))
         r = abd.rc
-        return r.left, r.top, r.right - r.left, r.bottom - r.top
+        return r.left, r.top, r.right - r.left, r.bottom - r.top, abd.uEdge
     except Exception:
-        return 0, 1050, 1920, 30
+        return 0, 1050, 1920, 30, ABE_BOTTOM
 
 
 def load_state():
@@ -137,7 +143,6 @@ class SpeechBubble(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         fm = QFontMetrics(self.font)
         w, h = self.width(), self.height()
-        body = QRect(0, 0, w - 1, h - 10)
         path = QPainterPath()
         path.addRoundedRect(0.0, 0.0, float(w - 1), float(h - 10), 10.0, 10.0)
         # little tail at bottom-center
@@ -216,8 +221,11 @@ class InfoPanel(QWidget):
 class Mascot(QWidget):
     def __init__(self):
         super().__init__()
-        self.tb = get_taskbar_rect()           # left, top, w, h
-        # NOTE: no WindowTransparentForInput -> the cat is clickable (pet it)
+        self.tb = get_taskbar_rect()           # left, top, w, h, edge
+        self.edge = self.tb[4]
+        # NOTE: no WindowTransparentForInput -> the cat is clickable (pet it).
+        # A per-frame mask (see _apply_mask) makes only the cat pixels hit-able,
+        # so clicks on the transparent area pass through to whatever is behind.
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
                             | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -225,9 +233,16 @@ class Mascot(QWidget):
         self.setCursor(Qt.PointingHandCursor)
 
         self.pix = self._load_sprites()        # name -> QPixmap
+        # personality / voice (created first so the brain can restore drives)
+        self.cat = Cat()
         self.brain = Brain()                    # autonomous behaviour engine
+        self.brain.load_drives(self.cat.get_drives())   # survive restarts
+        self.bubble = SpeechBubble()
+        self.info = InfoPanel()
+        self.hovering = False
         self.mode = "brain"                     # "brain" | "react"
         self.src_key = None                     # id of current frame list (reset detector)
+        self._mask_key = None                   # id of pixmap the mask was built from
         self.frames = self.brain.frames
         self.period = self.brain.period
         self.speed = self.brain.speed
@@ -235,16 +250,16 @@ class Mascot(QWidget):
         self.facing = "right"                   # right | left
         self.last_frame_t = time.time()
         self.last_tick = time.time()
+        self.next_state_poll = 0.0              # throttle load_state()
+        self._state = None
+        self.next_save = time.time() + 30       # periodic drive persistence
         self.x = self.tb[0] + self.tb[2] - DISP - 220  # start near right, clear tray
         self.dir = -1                            # pacing direction
         self.left_bound = self.tb[0] + 20
         self.right_bound = self.tb[0] + self.tb[2] - DISP - 200
-
-        # personality / voice
-        self.cat = Cat()
-        self.bubble = SpeechBubble()
-        self.info = InfoPanel()
-        self.hovering = False
+        if self.right_bound <= self.left_bound:  # narrow / side taskbar guard
+            self.right_bound = self.left_bound + 1
+            self.x = self.left_bound
         self.cs = None                # current Claude state this tick
         self.prev_cs = None
         self.last_say = 0.0
@@ -288,6 +303,7 @@ class Mascot(QWidget):
             self.cat.console()
         else:
             self.cat.pet()
+        self.cat.report_outcome(1.0)         # attention -> the last line "landed"
         self.last_say = 0                    # let the reaction speak now
         self.update()
 
@@ -302,16 +318,17 @@ class Mascot(QWidget):
         a_quit = m.addAction("✖  Quit")
         act = m.exec_(gpos)
         if act == a_feed:
-            self.brain.feed(); self.cat.feed(); self.last_say = 0
+            self.brain.feed(); self.cat.feed(); self.cat.report_outcome(1.0)
+            self.last_say = 0
         elif act == a_pet:
             res = self.brain.receive_pet()
             self.cat.console() if res == "consoled" else self.cat.pet()
-            self.last_say = 0
+            self.cat.report_outcome(1.0); self.last_say = 0
         elif act == a_sleep:
-            self.brain.force_sleep(); self.cat.say("wake")  # will wake later
+            self.brain.force_sleep(); self.cat.say("sleep"); self.last_say = 0
         elif act == a_quit:
             STOP_FILE.write_text("stop")     # tell the watcher not to relaunch
-            self.cat.save(); self.cat.save_know()
+            self.persist()
             QApplication.instance().quit()
 
     def enterEvent(self, _):
@@ -328,6 +345,14 @@ class Mascot(QWidget):
             pm = QPixmap(f).scaled(DISP, DISP, Qt.KeepAspectRatio,
                                    Qt.FastTransformation)
             d[name] = pm
+        if not d:   # gitignored sprites missing on a fresh clone -> cat invisible
+            msg = (f"[mascot] WARNING: no sprites in {SPRITE_DIR} — the cat will "
+                   f"be invisible. Restore cat4_states/*.png (git add -f).\n")
+            sys.stderr.write(msg)
+            try:
+                (Path(__file__).parent / "mascot.log").open("a", encoding="utf-8").write(msg)
+            except Exception:
+                pass
         return d
 
     def _sprite(self, name):
@@ -348,7 +373,10 @@ class Mascot(QWidget):
         if self._zcount % 20 == 0:        # ~ every 2s, keep above the taskbar
             self._raise_above_taskbar()
 
-        st = load_state()
+        if now >= self.next_state_poll:        # throttle disk polling (~3/s)
+            self._state = load_state()
+            self.next_state_poll = now + 0.3
+        st = self._state
         cs = st.get("currentState") if st else None
         self.cs = cs
 
@@ -357,6 +385,7 @@ class Mascot(QWidget):
             info = st.get("lastToolName") if st else None
             if cs == "tool_failure":
                 self.brain.scare(45)         # errors startle the cat
+                self.cat.report_outcome(0.0)  # a scare = the last line didn't help
             if cs in ("tool_success", "tool_failure", "question", "done", "auth_success"):
                 self.cat.observe_claude(cs, info)
                 evmap = {"tool_success": ("claude_success", 18),
@@ -389,6 +418,12 @@ class Mascot(QWidget):
         if (now - self.last_frame_t) * 1000 >= self.period:
             self.fi = (self.fi + 1) % len(self.frames)
             self.last_frame_t = now
+
+        # shape the window to the current sprite (click-through transparency)
+        cur = self._sprite(self.frames[self.fi])
+        if cur is not None and id(cur) != self._mask_key:
+            self._mask_key = id(cur)
+            self._apply_mask(cur)
 
         if self.speed:
             self.x += self.dir * self.speed
@@ -428,15 +463,39 @@ class Mascot(QWidget):
             else:
                 doing = DOING.get(self.brain.behavior, self.brain.behavior)
             self.info.update_info(doing, self.brain.drives(),
-                                  int(self.cat.state.get("affection", 0)),
+                                  int(self.cat.affection()),
                                   self.x + DISP / 2, self.y() - 4)
+
+        # persist drives periodically so they survive the next restart
+        if now >= self.next_save:
+            self.next_save = now + 30
+            self.persist()
 
         self.update()
 
     def y(self):
-        # window bottom rests FOOT_OVERLAP px onto the taskbar top edge,
-        # so the cat stands ON the bar with its body above it on the desktop
+        # bottom taskbar (default): cat stands ON the bar's top edge, body above.
+        # top taskbar: cat hangs just under the bar's bottom edge.
+        if self.edge == ABE_TOP:
+            return self.tb[1] + self.tb[3] - FOOT_OVERLAP
         return self.tb[1] - DISP + FOOT_OVERLAP
+
+    def _apply_mask(self, pm):
+        """Shape the window to the sprite's opaque pixels so clicks on the
+        transparent area fall through to whatever is behind the cat."""
+        try:
+            offx = (DISP - pm.width()) // 2
+            offy = DISP - pm.height()
+            region = QRegion(pm.mask()).translated(offx, offy)
+            self.setMask(region)
+        except Exception:
+            self.clearMask()
+
+    def persist(self):
+        """Save personality + current drives (called periodically and on quit)."""
+        self.cat.set_drives(self.brain.snapshot_drives())
+        self.cat.save()
+        self.cat.save_know()
 
     def _raise_above_taskbar(self):
         try:
@@ -456,9 +515,23 @@ class Mascot(QWidget):
         p.end()
 
 
+def _set_dpi_aware():
+    """Make the process DPI-aware so the WinAPI taskbar rect and Qt geometry are
+    both in real physical pixels (no virtualization) -> they stay aligned on
+    scaled displays. Must run before QApplication is created."""
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)   # per-monitor aware
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()     # older Windows fallback
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
+    _set_dpi_aware()
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
     m = Mascot()
-    app.aboutToQuit.connect(m.cat.save)
+    app.aboutToQuit.connect(m.persist)
     sys.exit(app.exec_())
