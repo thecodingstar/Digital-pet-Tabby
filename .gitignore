@@ -15,6 +15,7 @@ mascot_config.json
 cat_config.json
 cat_state.json
 cat_brain.json
+cat_metrics.json
 .env
 .env.local
 statusline/state/
@@ -33,3 +34,6 @@ env/
 Thumbs.db
 .DS_Store
 .mascot_stop
+
+# --- graphify generated graph ---
+graphify-out/

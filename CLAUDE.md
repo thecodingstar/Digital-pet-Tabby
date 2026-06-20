@@ -35,16 +35,20 @@ taskbar_mascot_cat.py   # PyQt5 window: renders sprites on the taskbar, owns the
                         #   click menu, click-to-pet. Reactive vs brain modes.
 brain.py                # Autonomous behaviour engine + drives (energy/hunger/
                         #   social/fear). Picks behaviours; drive overrides.
-chatter.py              # Cat: voice (OpenAI-compatible LLM), persistent
-                        #   personality + memory, and the self-improving
-                        #   offline knowledge store with a daily API budget.
+chatter.py              # Cat: voice (OpenAI-compatible LLM), personality, and a
+                        #   self-improving memory — structured reward-scored recall,
+                        #   confidence facts, telemetry, daily API budget.
 run_mascot.py           # Launcher: finds a real python, runs the mascot,
                         #   restarts on file change / crash, honours Quit.
+sim_harness.py          # Offline sim (stubbed LLM) for measuring memory changes.
 cat4_slice.py           # One-off: slices source sheets -> cat4_states sprites.
 cat4_states/            # 42 sprite PNGs (384x384, transparent) + _cycles GIFs
                         #   + MANIFEST.md. The art library Tabby is drawn from.
 archive/                # Old experiments (statusline cat, v1/v2 mascots, etc.)
 ```
+
+**Full brain/memory design is documented in `BRAIN.md`** — read it before
+changing `brain.py` / `chatter.py`. Verify memory changes with `sim_harness.py`.
 
 ### Runtime state / secrets (all gitignored)
 
@@ -52,8 +56,9 @@ archive/                # Old experiments (statusline cat, v1/v2 mascots, etc.)
 |------|------|
 | `.env` | `GROQ_API_KEY` (+ optional `GROQ_MODEL`, `GROQ_BASE_URL`) |
 | `cat_config.json` | alt config for any OpenAI-compatible provider |
-| `cat_state.json` | personality: affection, traits, learned user_facts, mood |
-| `cat_brain.json` | learned response memory + daily API call counts |
+| `cat_state.json` | personality: affection, traits, confidence facts, mood, persisted drives + affinity/trust/active_hours, `schema_version` |
+| `cat_brain.json` | learned lines (reward/uses/ctx) + daily API counts, `schema_version` |
+| `cat_metrics.json` | per-day telemetry (local_hit_rate, served_sim, reward, …) |
 | `.mascot_stop` | sentinel written by the Quit menu so the watcher stops |
 
 `cat_config.example.json` / `.env.example` are placeholders only — NEVER put a
@@ -72,28 +77,31 @@ Reads `~/.claude/statusline/state/<session>.json` (written by
 thinking, tool_running, subagent_running, question, tool_success, tool_failure,
 permission, done, auth_success.
 
-### Drives (brain.py)
-`energy` (rest/active), `hunger` (rises; feed resets), `social` (rises when
-ignored; petting lowers), `fear` (spikes on errors; consoling drops fast).
-Urgent drives override behaviour: fear→cower, hunger→beg, social→seek. Mood is
-derived from the drives. Behaviours map to `cat4_states` sprite names.
+### Drives + behaviour learning (brain.py)
+`energy/hunger/social/fear` drift over time; urgent drives override behaviour
+(fear→cower, hunger→beg, social→seek). On top of that: **mood inertia** (smoothed
+valence/arousal), **behaviour affinity** (learns which behaviours earn your
+attention), **trust + jumpiness** (consoling calms, error-storms sensitize), and a
+**user-activity rhythm** (naps cluster in your quiet hours). All persist. See BRAIN.md.
 
 ### Interactions
 - **Left-click** = pet (consoles if scared).
 - **Right-click** = menu: Feed / Pet / Sleep / Quit.
 - **Hover** = info panel (what she's doing + drive bars + bond %).
 
-### Voice + self-improving memory (chatter.py)
-- LLM via any OpenAI-compatible endpoint (default Groq `llama-3.3-70b-versatile`).
-  Cloudflare needs a browser `User-Agent` header (already set).
-- Every API line is harvested into `cat_brain.json`, tagged with a context
-  signature. Recall uses **offline hashed-bag-of-words cosine** (no deps) to pick
-  the most context-similar learned line.
-- `_local_prob = 0.15 + 0.6·coverage + 0.5·budget_pressure` → as memory grows the
-  cat answers locally more, calling the API less.
-- **Daily budget** `DAILY_BUDGET=600` (Groq free tier is 1000 RPD / 30 RPM).
-- `reflect()` periodically distills observations into durable `user_facts`.
-- All network runs on a background worker thread; UI never blocks.
+### Voice + self-improving memory (chatter.py)  — see BRAIN.md for full detail
+- LLM via any OpenAI-compatible endpoint (default Groq `llama-3.3-70b-versatile`);
+  needs a browser `User-Agent` header (set).
+- **Structured context recall** (`RECALL_MODE`, default `structured`; `vector`
+  legacy fallback): typed ctx + weighted field-match similarity, zero deps.
+- **Reward-scored lines** — outcomes (pet/feed=good, scare=bad) EWMA each line;
+  recall weights `(sim)³·(0.5+reward)·anti_repeat·cross_event`. Quality eviction.
+- **Context-aware coverage** drives `local_prob` → API calls fill gaps, not pile dups.
+- **Confidence facts** (categories, evidence, decay) from reflection.
+- **Daily budget** 600; **telemetry** → `cat_metrics.json`. All network on a
+  worker thread (RLock: prompt under lock, network outside, store under lock).
+- Guardrails: ASCII-only `_clean_line`, dedup, UTF-8 + atomic writes, canned
+  fallback, schema-versioned migration + self-heal on load.
 
 ## Conventions / gotchas
 - Window stands ON the taskbar's top edge (`FOOT_OVERLAP`), forced topmost via
