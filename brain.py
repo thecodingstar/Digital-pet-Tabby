@@ -36,7 +36,7 @@ BEHAVIORS = {
     "groom":   dict(frames=["love"],                      period=1000, speed=0, dur=(2, 3),    energy=+0.3, base=1),
     "grumpy":  dict(frames=["grumpy"],                    period=1000, speed=0, dur=(1.5, 3),  energy=-0.2, base=1),
     # extra idle flavour (Claude not running) — all reuse existing sprites
-    "loaf":    dict(frames=["sitting"],                   period=1000, speed=0, dur=(6, 14),   energy=+1.5, base=2),
+    "loaf":    dict(frames=["loaf"],                      period=1000, speed=0, dur=(6, 14),   energy=+1.5, base=2),
     "knead":   dict(frames=["love"],                      period=700,  speed=0, dur=(2, 4),    energy=+0.2, base=1),
     "ponder":  dict(frames=["thinking", "curious", "alert"], period=520, speed=0, dur=(2, 4),  energy=-0.2, base=1),
     "watch":   dict(frames=["alert", "curious"],          period=600,  speed=0, dur=(2, 4),    energy=-0.1, base=2),
@@ -47,6 +47,12 @@ BEHAVIORS = {
     "startle": dict(frames=["surprised"],                 period=600,  speed=0, dur=(1.2, 2.2), energy=-0.2, base=0),
     "angry":   dict(frames=["angry"],                     period=700,  speed=0, dur=(1.5, 3),  energy=-0.3, base=0),
     "sad":     dict(frames=["sad"],                       period=1000, speed=0, dur=(2, 4),    energy=-0.1, base=0),
+    # new sprite library (cat5): real loaf + sleepy/groom variety + bold reactions
+    "yawn":    dict(frames=["yawn"],                      period=900,  speed=0, dur=(1.5, 2.5), energy=+0.2, base=1),
+    "scratch": dict(frames=["scratch"],                   period=500,  speed=0, dur=(1.5, 3),  energy=-0.2, base=1),
+    "curl":    dict(frames=["sleep_curled"],              period=1000, speed=0, dur=(12, 28),  energy=+7.0, base=2),
+    "hiss":    dict(frames=["hiss"],                      period=600,  speed=0, dur=(1.5, 3),  energy=-0.3, base=0),
+    "defensive_arch": dict(frames=["defensive_arch"],     period=700,  speed=0, dur=(2, 4),    energy=-0.3, base=0),
     # anticipation: perks up just before your usual coding hours (X6). base=0 ->
     # never random, only triggered by pre_active().
     "anticipate": dict(frames=["alert", "curious"],       period=480,  speed=0, dur=(2, 4),    energy=-0.2, base=0),
@@ -246,12 +252,16 @@ class Brain:
         if time.time() - self._last_console_t > 30:
             self.trust = max(0.0, self.trust - 0.03)
         self.fear = _clamp(self.fear + effective)
-        # reaction sprite: an error storm makes her fed-up (angry), a big fright
-        # makes her cower (scared), a one-off just startles her (surprised).
-        if self.jumpiness >= 0.6:
+        # reaction sprite depends on fright + temperament. A bold cat (low
+        # shyness) stands its ground (hiss / arched back); a timid one startles
+        # or cowers; a sustained error storm just makes her fed-up (angry).
+        bold = self._shyness <= 0.45
+        if self.fear >= URGENT["fear"]:
+            self._set("defensive_arch" if bold else "cower")
+        elif self.jumpiness >= 0.6:
             self._set("angry")
-        elif self.fear >= URGENT["fear"]:
-            self._set("cower")
+        elif bold:
+            self._set("hiss")
         else:
             self._set("startle")
         return "scared"
@@ -343,9 +353,11 @@ class Brain:
     def _factor(self, name):
         e = self.energy
         active = self._is_active_hour()
-        if name == "sleep":
+        if name in ("sleep", "curl"):
             f = 6.0 if e < 22 else 1.2 if e < 45 else 0.04
             return f * (1.0 if active else 1.6)        # nap more in quiet hours (B5)
+        if name == "yawn":
+            return 1.6 if (e < 40 or self.arousal < 40) else 0.3   # yawns when sleepy
         if name == "sit":
             return 2.0 if e < 50 else 0.6
         if name in ("wander", "play"):
@@ -430,16 +442,21 @@ class Brain:
         self.jumpiness = max(0.0, self.jumpiness - 0.03 * dt)
         self._elapsed += dt
 
-        # a sudden fear spike interrupts whatever we were doing
-        if self.fear >= URGENT["fear"] and self.behavior not in ("cower", "angry"):
+        # a sudden fear spike interrupts whatever we were doing (but not an
+        # ongoing fear/anger reaction, so those sprites get their moment)
+        if (self.fear >= URGENT["fear"]
+                and self.behavior not in ("cower", "angry", "defensive_arch", "hiss")):
             self._set("cower")
             return
         if self._elapsed < self._dur:
             return
         # B3: finishing a restful behaviour gives a small contentment bump
-        if self.behavior in ("groom", "sleep", "stretch"):
+        if self.behavior in ("groom", "sleep", "curl", "stretch"):
             self.valence = _clamp(self.valence + 5)
-        if self.behavior == "sleep":
+        # scripted wake-up: nap -> yawn -> stretch -> sit
+        if self.behavior in ("sleep", "curl"):
+            self._set("yawn")
+        elif self.behavior == "yawn":
             self._set("stretch")
         elif self.behavior == "stretch":
             self._set("sit")

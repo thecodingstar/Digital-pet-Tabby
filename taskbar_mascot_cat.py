@@ -28,6 +28,8 @@ DOING = {
     "watch": "watching you", "anticipate": "watching for you",
     "beg": "begging for food", "seek": "wants attention", "cower": "scared!",
     "startle": "startled!", "angry": "annoyed", "sad": "a bit down",
+    "yawn": "yawning", "scratch": "scratching", "curl": "curled up napping",
+    "hiss": "hissing!", "defensive_arch": "back arched!",
 }
 REACT_DOING = {
     "tool_running": "watching you work", "subagent_running": "following along",

@@ -14,6 +14,13 @@ curious, playful, done (proud/satisfied), angry, hungry, sad, scared, surprised,
 Deduped variants from GG_2: kept the stronger pose, dropped near-dups
 (proud_a≈proud_b, curious_a≈curious_b, angry_b≈grumpy, hungry_b weaker, sad_a < sad_b).
 
+## Extra poses (6) — added from `Gemini_..._7jkbv9...png` via `cat5_slice.py`
+hiss (teeth-bared snarl), yawn (sitting wide-mouth), defensive_arch (spicy
+arched back), loaf (real loaf — replaces the `sitting`-faked loaf behaviour),
+sleep_curled (curled nap, alt to `sleeping`), scratch (hind-leg groom).
+Component-isolated (only the matched cat's blob kept → no header/label bleed),
+normalized onto the same 384² bottom-aligned canvas.
+
 ## Walk cycle — side, 6 frames (loops)
 `walk-1 → walk-2 → walk-3 → walk-4 → walk-5 → walk-6 → (loop)`
 

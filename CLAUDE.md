@@ -50,7 +50,10 @@ dashboard.py            # Zero-dep brain tracker: reads the runtime json, writes
                         #   standalone dashboard.html (inline-SVG charts). --open.
 sim_harness.py          # Offline sim (stubbed LLM) for measuring memory changes.
 cat4_slice.py           # One-off: slices source sheets -> cat4_states sprites.
-cat4_states/            # 42 sprite PNGs (384x384, transparent) + MANIFEST.md.
+cat5_slice.py           # One-off: component-isolates extra poses (hiss/yawn/
+                        #   defensive_arch/loaf/sleep_curled/scratch) from the
+                        #   7jkbv9 sheet onto the same 384^2 canvas.
+cat4_states/            # 48 sprite PNGs (384x384, transparent) + MANIFEST.md.
                         #   Tracked in git (un-ignored). The art Tabby is drawn from.
 archive/                # Old experiments + scratch. gitignored (local-only).
 ```
