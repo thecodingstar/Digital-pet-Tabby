@@ -41,3 +41,6 @@ Thumbs.db
 
 # --- graphify generated graph ---
 graphify-out/
+
+# --- archived experiments / scratch (kept locally, not in git) ---
+archive/
