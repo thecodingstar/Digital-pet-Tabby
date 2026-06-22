@@ -94,7 +94,11 @@ attention), **trust + jumpiness** (consoling calms, error-storms sensitize), and
 **user-activity rhythm** (naps cluster in your quiet hours). Idle adds flavour
 behaviours (`loaf/knead/ponder/watch`) + a cursor-proximity glance, and the brain
 tallies **behaviour usage** (`behavior_counts`/`behavior_secs`) to expose
-repetition. All persist. See BRAIN.md.
+repetition. **Cross-brain wiring (X-series):** the mascot pulls
+`cat.behavior_hints()` → `brain.apply_hints()` so learned traits/quiz prefs bias
+behaviour selection + scare; Claude transitions feed `brain.note_activity()` so her
+decaying activity rhythm lets her **anticipate** sessions (`pre_active` →
+`anticipate` behaviour). One-directional seam; see BRAIN.md §3.5. All persist.
 
 ### Interactions
 - **Left-click** = pet (consoles if scared).

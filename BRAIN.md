@@ -202,6 +202,45 @@ loses data. Drives + learning persist every 30s and on quit.
 
 ---
 
+## 3.5 Cross-brain wiring (X-series)
+
+The two brains stay decoupled — `brain.py` never imports or calls `chatter`. The
+**mascot orchestrates** via one read surface + one write surface, plus an activity
+feed:
+
+```
+chatter.behavior_hints() ──pull──► mascot ──apply_hints()──► brain   (learned -> behaviour)
+mascot Claude transitions ─────────────────► brain.note_activity()    (rhythm from coding)
+```
+
+- **`chatter.Cat.behavior_hints()` (1a, X1)** — lock-held, network-free. Returns
+  `{traits, prefs{chattiness, comfort_style, chronotype, pace}, schedule_conf}`.
+  Prefs are distilled from `user_profile` quiz answers by `_pref_extract` keyword
+  maps (answer text decisive, question text fills gaps, later `ts` overrides).
+  Neutral on cold start; tolerant of malformed records. Intentionally lossy.
+- **`brain.Brain.apply_hints(hints)` (1b, X3)** — UI-thread, no lock. Precomputes
+  bounded `[0.6, 1.6]` per-behaviour multipliers from `TRAIT_EFFECTS`
+  (playfulness→play/zoomies/wander/happy, curiosity→curious/watch/ponder/think,
+  shyness→+loaf/sit/sleep −zoomies/play, sass→grumpy), folded into `_choose`.
+  `scare` softens ×0.6 for `comfort_style=="space"` and amplifies slightly with
+  shyness. `apply_hints({})` is a perfect neutral identity.
+- **`note_activity(weight, now, hour)` (1c, X4)** — replaces the old inline
+  `active_hours[h]+=1`. Lazily decays the whole histogram by `RHYTHM_DECAY**days`
+  before bumping (`_rhythm_last_ts` persisted; missing key → now, no upgrade
+  decay). Called from feed/pet AND from the mascot's `tool_success/failure/
+  question/done` transitions, so coding rhythm is learned from coding.
+- **Prediction + anticipation (1d, X5/X6)** — `active_curve()` (normalised),
+  `predicted_active()` (≥0.5 of peak, needs `RHYTHM_MIN_SAMPLES`),
+  `pre_active()` (a predicted hour within `PRE_ACTIVE_HOURS` ahead, not yet
+  active). `_choose` returns the drive-only `anticipate` behaviour before your
+  usual hours and suppresses `sleep`/`loaf` while you usually code. Cold start →
+  no prediction, no false anticipation.
+
+Hints are refreshed on the ~30s persist cadence and right after a quiz answer —
+never per tick (it takes the chatter lock). Verified by `sim_harness.py` X12.
+
+---
+
 ## 4. Verifying changes — `sim_harness.py` (M0)
 
 ```
@@ -238,6 +277,8 @@ rising learning curve, no drive runaway over a 30-min behaviour sim.
 | `AFFINITY_BOUNDS/ALPHA` | brain.py | behaviour-learning clamp / rate |
 | `BEHAV_HISTORY_N` 4 | brain.py | recent-behaviour decay window |
 | `TRUST_INIT` 0.30 | brain.py | starting trust |
+| `RHYTHM_DECAY` 0.97 / `RHYTHM_MIN_SAMPLES` 12 / `PRE_ACTIVE_HOURS` 1 | brain.py | rhythm decay-per-day / samples before predicting / anticipation look-ahead (X4,X5) |
+| `TRAIT_MULT_BOUNDS` (0.6,1.6) / `TRAIT_GAIN` 1.2 / `TRAIT_EFFECTS` | brain.py | trait→behaviour bias clamp / gain / map (X3) |
 | `BEHAVIORS` | brain.py | per-behaviour frames/period/speed/dur/energy |
 
 ---
@@ -246,5 +287,8 @@ rising learning curve, no drive runaway over a 30-min behaviour sim.
 **Drives (smoothed into mood) + event form a typed context → context recalls the
 best-fitting, best-performing learned line or spends a budgeted API call to fill a
 gap → outcomes score lines, reflection distils confidence facts, behaviour affinity
-and trust adapt to you → everything persists.** She behaves autonomously, speaks in
-context, learns you, and needs the cloud less the longer she lives.
+and trust adapt to you → everything persists.** Her learned traits + quiz prefs
+also bias what she *does* (`behavior_hints → apply_hints`), and her decaying
+activity rhythm lets her **anticipate** your coding sessions (`note_activity`,
+`pre_active`). She behaves autonomously, speaks in context, learns you, acts on
+what she's learned, and needs the cloud less the longer she lives.

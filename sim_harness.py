@@ -85,6 +85,65 @@ def run(mode, n, seed=0):
     }
 
 
+def rhythm_checks():
+    """X12: rhythm / anticipation / comfort-style assertions for the X-series
+    wiring. Independent of the memory sim; pure brain, offline, instant."""
+    import time
+    import brain
+    from brain import Brain
+    base = time.time()
+    H = [14, 15]
+    checks = []
+
+    def chk(name, ok):
+        checks.append((name, bool(ok)))
+
+    # 1. curve peaks in H; predicted False before samples, True in H, False outside
+    b = Brain()
+    b.note_activity(1.0, now=base, hour=14)
+    chk("predicted False before enough samples", b.predicted_active(14) is False)
+    for _ in range(brain.RHYTHM_MIN_SAMPLES):
+        for h in H:
+            b.note_activity(1.0, now=base, hour=h)
+    curve = b.active_curve()
+    chk("active_curve peaks in H", max(range(24), key=lambda i: curve[i]) in H)
+    chk("predicted_active True in H", b.predicted_active(14) and b.predicted_active(15))
+    chk("predicted_active False outside H", not b.predicted_active(3))
+    # 2. pre_active in the hour before H, not during
+    chk("pre_active True at 13", b.pre_active(13))
+    chk("pre_active False at 14", not b.pre_active(14))
+    # 3. decay: a bump 40 days back decays below its undecayed value
+    b2 = Brain()
+    b2.note_activity(10.0, now=base - 40 * 86400, hour=14)
+    b2.note_activity(1.0, now=base, hour=2)
+    chk("old bucket decayed", b2.active_hours[14] < 10.0)
+
+    # 4. comfort_style "space" yields a strictly smaller fear delta than cheer/None
+    def fear_delta(comfort):
+        bb = Brain()
+        bb.apply_hints({"traits": {"shyness": 0.5}, "prefs": {"comfort_style": comfort}})
+        bb.fear = 0.0
+        bb.scare(45)
+        return bb.fear
+    fs, fc, fn = fear_delta("space"), fear_delta("cheer"), fear_delta(None)
+    chk("space scare < cheer", fs < fc)
+    chk("cheer == none (unchanged)", abs(fc - fn) < 1e-9)
+
+    # 5. cold start: empty hints -> no anticipation, no drive runaway, variety kept
+    b3 = Brain()
+    b3.apply_hints({})
+    seen, anticipated = set(), False
+    for _ in range(4000):                     # ~6 min of ticks
+        b3.tick(0.09)
+        seen.add(b3.behavior)
+        if b3.behavior == "anticipate":
+            anticipated = True
+    chk("cold start never anticipates", not anticipated)
+    chk("cold start drives in range", 0 <= b3.energy <= 100 and 0 <= b3.hunger <= 100)
+    chk("cold start keeps variety (>=5 behaviours)", len(seen) >= 5)
+    return checks
+
+
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     rows = [run("vector", n), run("structured", n)]
@@ -94,3 +153,12 @@ if __name__ == "__main__":
     print(" | ".join(f"{c:>15}" for c in cols))
     for r in rows:
         print(" | ".join(f"{str(r[c]):>15}" for c in cols))
+
+    print("\n=== X-series rhythm / anticipation / comfort checks ===")
+    results = rhythm_checks()
+    for name, ok in results:
+        print(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+    if all(ok for _, ok in results):
+        print("  all X12 checks passed")
+    else:
+        sys.exit("  X12 CHECKS FAILED")
