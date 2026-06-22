@@ -656,6 +656,15 @@ class Cat:
             self._q_pending = True
             self._req.append(("__quiz__", {}))
 
+    def ask_now(self):
+        """Force a question regardless of cooldown/affection (manual trigger from
+        the menu). Still skips if one is already pending or waiting."""
+        with self._lock:
+            if self._q_ready or self._q_pending:
+                return
+            self._q_pending = True
+            self._req.append(("__quiz__", {}))
+
     def poll_question(self):
         """Return a built question dict {id, text, options:[{label,..}]} or None."""
         with self._lock:

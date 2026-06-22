@@ -432,21 +432,23 @@ class Mascot(QWidget):
         cx = self.x + DISP / 2
         self.bubble.show_text(text, cx, self.y() + 24)
 
-    def _tick_quiz(self, now):
-        """When calm and idle, occasionally ask a get-to-know-you question, then
-        surface any the worker has built. She sits still while it's on screen so
-        the answer buttons stay put under the cursor (C)."""
+    def _auto_ask(self, now):
+        """Periodically offer a question (any mode, not just idle). Internally
+        gated by cooldown/affection so it asks now and then, never nags (C)."""
         if now >= self.next_quiz_check:
-            self.next_quiz_check = now + 30
-            self.cat.maybe_ask()                  # gated internally (cooldown/bond)
-        if self.qbubble.q is not None:            # a question is on screen
-            self.brain._set("sit")                # keep her parked beside the card
+            self.next_quiz_check = now + random.uniform(25, 45)   # jittered cadence
+            self.cat.maybe_ask()
+
+    def _pump_quiz(self):
+        """Surface a question the worker has built (manual or auto). She sits
+        still while it's on screen so the answer buttons stay put (C)."""
+        if self.qbubble.q is not None:            # already on screen
+            self.brain._set("sit")
             return
         q = self.cat.poll_question()
         if q:
             self.brain._set("sit")
-            cx = self.x + DISP / 2
-            self.qbubble.ask(q, cx, self.y() - 4)
+            self.qbubble.ask(q, self.x + DISP / 2, self.y() - 4)
 
     def _on_quiz_answer(self, q, idx):
         line = self.cat.answer_question(q, idx)
@@ -490,10 +492,13 @@ class Mascot(QWidget):
         a_feed = m.addAction("🍗  Feed")
         a_pet = m.addAction("✋  Pet")
         a_sleep = m.addAction("😴  Sleep")
+        a_ask = m.addAction("💬  Ask me something")
         m.addSeparator()
         a_quit = m.addAction("✖  Quit")
         act = m.exec_(gpos)
-        if act == a_feed:
+        if act == a_ask:
+            self.cat.ask_now()               # force a quiz card (manual trigger)
+        elif act == a_feed:
             self.brain.feed(); self.cat.feed(); self.cat.report_outcome(1.0)
             self.last_say = 0
         elif act == a_pet:
@@ -585,6 +590,10 @@ class Mascot(QWidget):
             self.period = self.brain.period
             self.speed = self.brain.speed
 
+        # quiz runs in any mode now (asks at random, not only when idle)
+        self._auto_ask(now)
+        self._pump_quiz()
+
         # reset frame index whenever the active clip changes
         key = id(self.frames)
         if key != self.src_key:
@@ -621,7 +630,6 @@ class Mascot(QWidget):
                     self.next_musing = now + random.uniform(45, 120) * qf
                     self._emote("musing", 0, self._ctx())
                 self._notice_cursor()            # perk up when the mouse is near (B)
-                self._tick_quiz(now)              # occasionally ask a question (C)
             elif u != self.prev_drive:            # announce a new urgent need
                 self.prev_drive = u
                 ev = {"fear": "scared", "hunger": "hungry",
