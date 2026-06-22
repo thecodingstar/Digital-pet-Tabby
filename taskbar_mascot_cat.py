@@ -163,9 +163,15 @@ class SpeechBubble(QWidget):
 
 
 class InfoPanel(QWidget):
-    """Hover panel: what the cat is doing + drive bars + bond %."""
-    BARS = [("energy", QColor(90, 200, 120)), ("hunger", QColor(230, 170, 60)),
-            ("social", QColor(90, 160, 230)), ("fear", QColor(220, 90, 90))]
+    """Polished hover card: name + status, bond, and labelled drive meters."""
+    BARS = [("energy", "Energy", QColor(80, 205, 130)),
+            ("hunger", "Hunger", QColor(235, 170, 60)),
+            ("social", "Social", QColor(95, 165, 235)),
+            ("fear",   "Fear",   QColor(225, 95, 95))]
+    MOOD_COLOR = {"content": QColor(120, 210, 150), "playful": QColor(95, 215, 205),
+                  "sleepy": QColor(140, 160, 200), "hungry": QColor(235, 175, 70),
+                  "lonely": QColor(110, 160, 235), "scared": QColor(230, 95, 95)}
+    W, H = 224, 168
 
     def __init__(self):
         super().__init__()
@@ -174,16 +180,35 @@ class InfoPanel(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.data = {}
-        self.title = QFont("Segoe UI Semibold", 9)
-        self.small = QFont("Segoe UI", 8)
+        self.f_name = QFont("Segoe UI Semibold", 11)
+        self.f_doing = QFont("Segoe UI", 8)
+        self.f_label = QFont("Segoe UI", 8)
+        self.f_val = QFont("Segoe UI Semibold", 8)
 
     def update_info(self, doing, drives, bond, cx, bottom_y):
         self.data = {"doing": doing, "drives": drives, "bond": bond}
-        w, h = 168, 112
-        self.setGeometry(int(cx - w / 2), int(bottom_y - h), w, h)
+        self.setGeometry(int(cx - self.W / 2), int(bottom_y - self.H), self.W, self.H)
         self.update()
         if not self.isVisible():
             self.show()
+
+    def _meter(self, p, x, y, w, label, val, col):
+        fm = QFontMetrics(self.f_label)
+        p.setFont(self.f_label)
+        p.setPen(QColor(176, 182, 196))
+        p.drawText(x, y + 9, label)
+        bx = x + 52
+        bw = w - 52 - 34
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(48, 52, 64))                    # track
+        p.drawRoundedRect(bx, y, bw, 9, 4, 4)
+        fill = max(0, min(bw, int(bw * val / 100)))
+        if fill > 0:
+            p.setBrush(col)
+            p.drawRoundedRect(bx, y, fill, 9, 4, 4)
+        p.setFont(self.f_val)
+        p.setPen(QColor(225, 228, 236))
+        p.drawText(bx + bw + 6, y + 9, f"{val}")
 
     def paintEvent(self, _):
         if not self.data:
@@ -191,30 +216,45 @@ class InfoPanel(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w, h = self.width(), self.height()
-        path = QPainterPath()
-        path.addRoundedRect(0.0, 0.0, float(w - 1), float(h - 1), 10.0, 10.0)
-        p.setPen(QPen(QColor(70, 70, 80), 1))
-        p.setBrush(QColor(28, 30, 38, 238))
-        p.drawPath(path)
-        p.setFont(self.title)
-        p.setPen(QColor(245, 220, 150))
-        p.drawText(12, 20, f"Tabby — {self.data['doing']}")
-        p.setFont(self.small)
-        p.setPen(QColor(200, 205, 215))
         d = self.data["drives"]
-        p.drawText(12, 36, f"mood: {d.get('mood','?')}   bond {self.data['bond']}%")
-        y = 46
-        for name, col in self.BARS:
-            val = int(d.get(name, 0))
-            p.setPen(QColor(190, 195, 205))
-            p.drawText(12, y + 9, name[:3])
-            x0, bw = 40, w - 52
-            p.setPen(Qt.NoPen)
-            p.setBrush(QColor(55, 58, 68))
-            p.drawRoundedRect(x0, y, bw, 8, 4, 4)
-            p.setBrush(col)
-            p.drawRoundedRect(x0, y, int(bw * val / 100), 8, 4, 4)
-            y += 15
+        mood = d.get("mood", "content")
+        accent = self.MOOD_COLOR.get(mood, QColor(150, 160, 175))
+
+        # card body + subtle border
+        path = QPainterPath()
+        path.addRoundedRect(1.0, 1.0, float(w - 2), float(h - 2), 12.0, 12.0)
+        p.setPen(QPen(QColor(60, 64, 78), 1))
+        p.setBrush(QColor(26, 28, 36, 245))
+        p.drawPath(path)
+        # mood accent strip down the left edge
+        p.setPen(Qt.NoPen)
+        p.setBrush(accent)
+        p.drawRoundedRect(1, 1, 5, h - 2, 2, 2)
+
+        # header: name + mood dot + status line
+        x = 16
+        p.setFont(self.f_name)
+        p.setPen(QColor(245, 224, 150))
+        p.drawText(x, 24, "Tabby")
+        nm = QFontMetrics(self.f_name).horizontalAdvance("Tabby")
+        p.setBrush(accent)
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(x + nm + 8, 13, 8, 8)               # mood dot
+        p.setFont(self.f_doing)
+        p.setPen(QColor(150, 156, 170))
+        p.drawText(x + nm + 22, 23, mood)
+        p.setPen(QColor(196, 202, 214))
+        p.drawText(x, 40, self.data["doing"])
+
+        # bond row (heart-coloured)
+        bond = int(self.data["bond"])
+        self._meter(p, x, 52, w - x - 12, "Bond", bond, QColor(235, 110, 140))
+
+        # drive meters
+        y = 74
+        for key, label, col in self.BARS:
+            self._meter(p, x, y, w - x - 12, label, int(d.get(key, 0)), col)
+            y += 21
         p.end()
 
 
