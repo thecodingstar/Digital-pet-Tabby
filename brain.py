@@ -44,6 +44,9 @@ BEHAVIORS = {
     "beg":     dict(frames=["hungry"],                    period=1000, speed=0, dur=(2, 4),    energy=-0.3, base=0),
     "seek":    dict(frames=["alert", "curious"],          period=420,  speed=2, dur=(2, 4),    energy=-0.6, base=0),
     "cower":   dict(frames=["scared"],                    period=1000, speed=0, dur=(2, 5),    energy=-0.3, base=0),
+    # anticipation: perks up just before your usual coding hours (X6). base=0 ->
+    # never random, only triggered by pre_active().
+    "anticipate": dict(frames=["alert", "curious"],       period=480,  speed=0, dur=(2, 4),    energy=-0.2, base=0),
 }
 
 # per-second drift of each drive while no interaction happens
@@ -58,6 +61,24 @@ TRUST_INIT = 0.30              # starting trust (B4)
 RHYTHM_DECAY = 0.97            # per-day decay of the activity histogram (~23-day half-life) (X4)
 RHYTHM_MIN_SAMPLES = 12        # min total weight before predictions trust the curve (X5)
 PRE_ACTIVE_HOURS = 1           # hours of look-ahead for anticipation (X5)
+# Personality -> behaviour bias (X3). Bounded like B2 affinity so innate `base`
+# still dominates. trait 0.5 == neutral; multiplier scales linearly around it.
+TRAIT_MULT_BOUNDS = (0.6, 1.6)
+TRAIT_GAIN = 1.2               # at trait 1.0 -> +0.6 (clamps to bound), 0.0 -> -0.6
+TRAIT_EFFECTS = {              # behaviour -> [(trait, +1 boost | -1 dampen), ...]
+    "play":    [("playfulness", +1), ("shyness", -1)],
+    "zoomies": [("playfulness", +1), ("shyness", -1)],
+    "wander":  [("playfulness", +1)],
+    "happy":   [("playfulness", +1)],
+    "curious": [("curiosity", +1)],
+    "watch":   [("curiosity", +1)],
+    "ponder":  [("curiosity", +1)],
+    "think":   [("curiosity", +1)],
+    "loaf":    [("shyness", +1)],
+    "sit":     [("shyness", +1)],
+    "sleep":   [("shyness", +1)],
+    "grumpy":  [("sass", +1)],
+}
 
 
 def _clamp(v, lo=0.0, hi=100.0):
@@ -81,6 +102,12 @@ class Brain:
         self._behav_hist = deque(maxlen=BEHAV_HISTORY_N)   # (name, t) for B6
         self.behavior_counts = {}      # behaviour -> times chosen (usage telemetry)
         self.behavior_secs = {}        # behaviour -> seconds spent (usage telemetry)
+        # cross-brain hints (X3): neutral defaults so the brain runs identically
+        # until the mascot pushes real hints via apply_hints().
+        self.hints = {}
+        self._trait_mult = {}          # behaviour -> bounded selection multiplier
+        self._comfort = None           # comfort_style: "cheer" | "space" | None
+        self._shyness = 0.5            # cached for scare modulation
         self.behavior = None
         self.frames = ["idle"]
         self.period = 220
@@ -117,6 +144,24 @@ class Brain:
         if self.social >= URGENT["social"] + bump:
             return "social"
         return None
+
+    # --- cross-brain hints (X3): learned personality -> behaviour bias --
+    def apply_hints(self, hints):
+        """Store hints from the voice brain and precompute bounded selection
+        multipliers. Single-threaded (UI/tick) — no lock. apply_hints({}) is a
+        perfectly neutral identity (all multipliers 1.0, comfort None)."""
+        self.hints = hints or {}
+        traits = self.hints.get("traits", {}) or {}
+        mult = {}
+        for beh, effects in TRAIT_EFFECTS.items():
+            m = 1.0
+            for tr, sign in effects:
+                m *= 1.0 + sign * TRAIT_GAIN * (float(traits.get(tr, 0.5)) - 0.5)
+            mult[beh] = max(TRAIT_MULT_BOUNDS[0], min(TRAIT_MULT_BOUNDS[1], m))
+        self._trait_mult = mult
+        prefs = self.hints.get("prefs", {}) or {}
+        self._comfort = prefs.get("comfort_style")
+        self._shyness = float(traits.get("shyness", 0.5))
 
     # --- interactions (called from the mascot) --------------------------
     def _reinforce(self, name, target):
@@ -169,6 +214,11 @@ class Brain:
 
     def scare(self, amount=70.0):
         self._reinforce(self.behavior, 0.0)    # got startled mid-behaviour
+        # X3: a human who wants quiet when code breaks gets a calmer cat; shy cats
+        # spook a little easier. Applied before the existing trust/jumpiness maths.
+        if self._comfort == "space":
+            amount *= 0.6
+        amount = max(0.0, amount * (1.0 + 0.4 * (self._shyness - 0.5)))
         # B4: trust dampens the spike; jumpiness from recent error-storms amplifies it
         effective = amount * (1 - 0.5 * self.trust) * (1 + self.jumpiness)
         self.jumpiness = min(1.0, self.jumpiness + 0.25)
@@ -296,6 +346,10 @@ class Brain:
         if u == "fear":   return "cower"
         if u == "hunger": return "beg"
         if u == "social": return "seek"
+        # X6: anticipation. Just before your usual coding hours, perk up and watch.
+        if self.pre_active() and random.random() < 0.85:
+            return "anticipate"
+        predicted = self.predicted_active()                 # active now -> stay perky
         now = time.time()
         names = list(BEHAVIORS)
         weights = []
@@ -303,7 +357,10 @@ class Brain:
             aff = self.affinity.get(n, 0.5)                 # B2
             w = (BEHAVIORS[n]["base"] * self._factor(n)
                  * (0.7 + 0.6 * aff)                        # learned preference
+                 * self._trait_mult.get(n, 1.0)             # X3 personality bias
                  * self._recent_penalty(n, now))            # B6
+            if predicted and n in ("sleep", "loaf"):        # X6: don't nap while
+                w *= 0.15                                   #     you usually code
             weights.append(w)
         if sum(weights) <= 0:
             return "sit"
