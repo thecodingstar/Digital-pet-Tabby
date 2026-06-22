@@ -54,6 +54,10 @@ AFFINITY_BOUNDS = (0.2, 1.0)   # behaviour-affinity clamp (B2)
 AFFINITY_ALPHA = 0.20          # affinity EWMA rate (B2)
 BEHAV_HISTORY_N = 4            # recent-behaviour decay window (B6)
 TRUST_INIT = 0.30              # starting trust (B4)
+# Cross-brain wiring (X-series): activity rhythm decay + anticipation.
+RHYTHM_DECAY = 0.97            # per-day decay of the activity histogram (~23-day half-life) (X4)
+RHYTHM_MIN_SAMPLES = 12        # min total weight before predictions trust the curve (X5)
+PRE_ACTIVE_HOURS = 1           # hours of look-ahead for anticipation (X5)
 
 
 def _clamp(v, lo=0.0, hi=100.0):
@@ -71,7 +75,8 @@ class Brain:
         self.affinity = {}         # behaviour -> learned affinity 0..1 (B2)
         self.trust = TRUST_INIT    # dampens fear spikes (B4)
         self.jumpiness = 0.0       # rises with error storms, amplifies fear (B4)
-        self.active_hours = [0] * 24   # learned user activity histogram (B5)
+        self.active_hours = [0.0] * 24   # learned user activity histogram (B5/X4)
+        self._rhythm_last_ts = time.time()   # last note_activity time, for decay (X4)
         self._last_console_t = 0.0
         self._behav_hist = deque(maxlen=BEHAV_HISTORY_N)   # (name, t) for B6
         self.behavior_counts = {}      # behaviour -> times chosen (usage telemetry)
@@ -123,8 +128,24 @@ class Brain:
         val = (1 - AFFINITY_ALPHA) * cur + AFFINITY_ALPHA * target
         self.affinity[name] = max(AFFINITY_BOUNDS[0], min(AFFINITY_BOUNDS[1], val))
 
+    def note_activity(self, weight=1.0, now=None, hour=None):
+        """Record activity at the current hour, lazily decaying the whole
+        histogram first by elapsed days (RHYTHM_DECAY ** days) so stale rhythm
+        fades (X4). `now`/`hour` are injectable for tests; default to real time.
+        Called from feed/pet AND from the mascot's Claude transitions, so coding
+        hours are actually learned from coding."""
+        now = time.time() if now is None else now
+        last = getattr(self, "_rhythm_last_ts", now)
+        days = max(0.0, (now - last) / 86400.0)
+        if days > 0:
+            f = RHYTHM_DECAY ** days
+            self.active_hours = [h * f for h in self.active_hours]
+        self._rhythm_last_ts = now
+        h = time.localtime(now).tm_hour if hour is None else hour
+        self.active_hours[h % 24] += weight
+
     def _note_active(self):
-        self.active_hours[time.localtime().tm_hour] += 1   # B5
+        self.note_activity(1.0)            # B5 (now decaying + Claude-fed, X4)
 
     def feed(self, amount=85.0):
         self._reinforce(self.behavior, 1.0)    # whatever she did just earned food
@@ -168,7 +189,8 @@ class Brain:
                 "social": round(self.social, 1), "fear": round(self.fear, 1),
                 "valence": round(self.valence, 1), "arousal": round(self.arousal, 1),
                 "trust": round(self.trust, 3), "jumpiness": round(self.jumpiness, 3),
-                "active_hours": list(self.active_hours),
+                "active_hours": [round(h, 2) for h in self.active_hours],
+                "rhythm_last_ts": round(getattr(self, "_rhythm_last_ts", time.time()), 1),
                 "affinity": {k: round(v, 3) for k, v in self.affinity.items()},
                 "behavior_counts": dict(self.behavior_counts),
                 "behavior_secs": {k: round(v, 1) for k, v in self.behavior_secs.items()}}
@@ -187,7 +209,9 @@ class Brain:
             self.jumpiness = max(0.0, min(1.0, float(d.get("jumpiness", self.jumpiness))))
             ah = d.get("active_hours")
             if isinstance(ah, list) and len(ah) == 24:
-                self.active_hours = [int(x) for x in ah]
+                self.active_hours = [float(x) for x in ah]
+            # missing key (old save) -> now, i.e. no spurious decay on first upgrade
+            self._rhythm_last_ts = float(d.get("rhythm_last_ts", time.time()))
             aff = d.get("affinity") or {}
             self.affinity = {k: max(AFFINITY_BOUNDS[0], min(AFFINITY_BOUNDS[1], float(v)))
                              for k, v in aff.items() if isinstance(v, (int, float))}
@@ -200,12 +224,42 @@ class Brain:
         except (TypeError, ValueError):
             pass
 
-    def _is_active_hour(self):
-        """True if the current hour is one the human is usually around (B5)."""
-        tot = sum(self.active_hours)
-        if tot < 10:                       # not enough data yet -> assume lively
+    # --- activity rhythm + prediction (X5) ------------------------------
+    def active_curve(self):
+        """active_hours normalised to its own max (0..1); all-zero -> all-zero."""
+        mx = max(self.active_hours) if self.active_hours else 0.0
+        if mx <= 0:
+            return [0.0] * 24
+        return [h / mx for h in self.active_hours]
+
+    def _hour(self, hour=None):
+        return time.localtime().tm_hour if hour is None else hour % 24
+
+    def predicted_active(self, hour=None):
+        """True if `hour` (default now) is one you usually code in — needs enough
+        samples first (cold start -> False, no false anticipation)."""
+        if sum(self.active_hours) < RHYTHM_MIN_SAMPLES:
+            return False
+        return self.active_curve()[self._hour(hour)] >= 0.5
+
+    def pre_active(self, hour=None):
+        """True if a predicted-active hour is within the next PRE_ACTIVE_HOURS and
+        the current hour is not yet active (the anticipation ramp)."""
+        if sum(self.active_hours) < RHYTHM_MIN_SAMPLES:
+            return False
+        h = self._hour(hour)
+        if self.predicted_active(h):
+            return False
+        curve = self.active_curve()
+        return any(curve[(h + k) % 24] >= 0.5 for k in range(1, PRE_ACTIVE_HOURS + 1))
+
+    def _is_active_hour(self, hour=None):
+        """True if the current hour is an above-average activity hour (B5). Built
+        on active_curve so nap bias and prediction share one source of truth."""
+        if sum(self.active_hours) < 10:    # not enough data yet -> assume lively
             return True
-        return self.active_hours[time.localtime().tm_hour] >= tot / 24.0
+        curve = self.active_curve()
+        return curve[self._hour(hour)] >= sum(curve) / 24.0
 
     # --- behaviour selection -------------------------------------------
     def _factor(self, name):
