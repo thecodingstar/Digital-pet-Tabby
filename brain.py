@@ -74,6 +74,8 @@ class Brain:
         self.active_hours = [0] * 24   # learned user activity histogram (B5)
         self._last_console_t = 0.0
         self._behav_hist = deque(maxlen=BEHAV_HISTORY_N)   # (name, t) for B6
+        self.behavior_counts = {}      # behaviour -> times chosen (usage telemetry)
+        self.behavior_secs = {}        # behaviour -> seconds spent (usage telemetry)
         self.behavior = None
         self.frames = ["idle"]
         self.period = 220
@@ -167,7 +169,9 @@ class Brain:
                 "valence": round(self.valence, 1), "arousal": round(self.arousal, 1),
                 "trust": round(self.trust, 3), "jumpiness": round(self.jumpiness, 3),
                 "active_hours": list(self.active_hours),
-                "affinity": {k: round(v, 3) for k, v in self.affinity.items()}}
+                "affinity": {k: round(v, 3) for k, v in self.affinity.items()},
+                "behavior_counts": dict(self.behavior_counts),
+                "behavior_secs": {k: round(v, 1) for k, v in self.behavior_secs.items()}}
 
     def load_drives(self, d):
         if not d:
@@ -187,6 +191,12 @@ class Brain:
             aff = d.get("affinity") or {}
             self.affinity = {k: max(AFFINITY_BOUNDS[0], min(AFFINITY_BOUNDS[1], float(v)))
                              for k, v in aff.items() if isinstance(v, (int, float))}
+            bc = d.get("behavior_counts") or {}
+            self.behavior_counts = {k: int(v) for k, v in bc.items()
+                                    if isinstance(v, (int, float))}
+            bs = d.get("behavior_secs") or {}
+            self.behavior_secs = {k: float(v) for k, v in bs.items()
+                                  if isinstance(v, (int, float))}
         except (TypeError, ValueError):
             pass
 
@@ -255,9 +265,12 @@ class Brain:
         self._dur = random.uniform(*b["dur"])
         self._elapsed = 0.0
         self._behav_hist.append((name, time.time()))        # B6 history
+        self.behavior_counts[name] = self.behavior_counts.get(name, 0) + 1  # usage
 
     # --- per-tick update -----------------------------------------------
     def tick(self, dt):
+        if self.behavior:                      # accrue time-in-behaviour (usage)
+            self.behavior_secs[self.behavior] = self.behavior_secs.get(self.behavior, 0.0) + dt
         # smooth valence/arousal toward drive-derived targets (B1)
         val_t = ((100 - self.fear) * 0.4 + (100 - self.hunger) * 0.2
                  + (100 - self.social) * 0.2 + self.energy * 0.2)

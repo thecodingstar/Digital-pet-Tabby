@@ -157,6 +157,8 @@ def build():
     drives = state.get("drives", {}) or {}
     affinity = drives.get("affinity", {}) or {}
     active = drives.get("active_hours", []) or []
+    beh_secs = drives.get("behavior_secs", {}) or {}
+    beh_cnt = drives.get("behavior_counts", {}) or {}
     facts = [f for f in state.get("user_facts", []) if isinstance(f, dict)]
     profile = state.get("user_profile", {}) or {}
 
@@ -183,6 +185,23 @@ def build():
     aff_items = sorted(affinity.items(), key=lambda kv: -kv[1])
     aff_bars = _bars([(k, v, C_TEAL) for k, v in aff_items])
     hist = _histogram(active if len(active) == 24 else [])
+
+    # behaviour usage: % of time spent in each (over-used states flagged red)
+    total_secs = sum(beh_secs.values()) or 1.0
+    beh_items = sorted(beh_secs.items(), key=lambda kv: -kv[1])
+
+    def _beh_color(p):
+        return C_RED if p > 25 else C_GOLD if p > 15 else C_TEAL
+    beh_bars = _bars([(f"{k}  x{beh_cnt.get(k, 0)}", v / total_secs * 100,
+                       _beh_color(v / total_secs * 100))
+                      for k, v in beh_items], dom=100, fmt="{:.0f}%")
+    if beh_items:
+        top = beh_items[0]
+        beh_note = (f"top state <b>{esc(top[0])}</b> takes "
+                    f"{top[1]/total_secs*100:.0f}% of her time across "
+                    f"{len(beh_items)} behaviours — red bars (&gt;25%) are over-used.")
+    else:
+        beh_note = "no autonomous behaviour recorded yet."
 
     # --- learned lines per event (count + avg reward) ---
     lines = brain.get("lines", {})
@@ -259,6 +278,8 @@ def build():
     <div class="card"><h2>API reliance (lower api = better)</h2>{reliance}</div>
     <div class="card"><h2>Personality traits</h2>{trait_bars}</div>
     <div class="card"><h2>Behaviour affinity (what earns your attention)</h2>{aff_bars}</div>
+    <div class="card full"><h2>Behaviour usage — time spent per state</h2>{beh_bars}
+      <div class="mute" style="font-size:11px;margin-top:8px">{beh_note}</div></div>
     <div class="card full"><h2>Active-hours rhythm (when she thinks you're around)</h2>{hist}</div>
     <div class="card"><h2>What she believes about you (confidence)</h2>{fact_bars}</div>
     <div class="card"><h2>Quiz answers</h2>{quiz_table}</div>
