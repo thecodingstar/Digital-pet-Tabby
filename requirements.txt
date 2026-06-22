@@ -1,0 +1,3 @@
+# Tabby taskbar mascot — runtime dependencies.
+# Everything else she needs (json, urllib, threading, ctypes) is in the stdlib.
+PyQt5>=5.15

@@ -9,6 +9,10 @@ cat2_states/
 cat3_states/
 preview_*.png
 
+# Tabby's sprite library IS shipped — she can't render without it.
+!cat4_states/
+!cat4_states/*.png
+
 # --- runtime / logs ---
 *.log
 mascot_config.json
