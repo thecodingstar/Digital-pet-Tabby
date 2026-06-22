@@ -306,7 +306,7 @@ class Brain:
     def _is_active_hour(self, hour=None):
         """True if the current hour is an above-average activity hour (B5). Built
         on active_curve so nap bias and prediction share one source of truth."""
-        if sum(self.active_hours) < 10:    # not enough data yet -> assume lively
+        if sum(self.active_hours) < RHYTHM_MIN_SAMPLES:   # not enough data -> lively
             return True
         curve = self.active_curve()
         return curve[self._hour(hour)] >= sum(curve) / 24.0

@@ -91,6 +91,7 @@ def _bars(items, w=560, bar_h=18, gap=8, dom=1.0, fmt="{:.2f}"):
     """items: list of (label, value, color). Horizontal bars scaled to dom."""
     if not items:
         return "<p class='mute'>nothing yet</p>"
+    dom = dom or 1.0                                   # guard against dom=0
     lab_w, val_w = 130, 44
     iw = w - lab_w - val_w
     h = len(items) * (bar_h + gap) + gap

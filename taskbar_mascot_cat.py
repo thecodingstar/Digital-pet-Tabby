@@ -561,6 +561,14 @@ class Mascot(QWidget):
         return self.pix.get(name)
 
     def _tick(self):
+        # A raise here would silently kill the QTimer and freeze the cat, so the
+        # game loop is exception-guarded: log and retry on the next tick.
+        try:
+            self._tick_impl()
+        except Exception as e:
+            sys.stderr.write(f"[mascot] tick error: {e!r}\n")
+
+    def _tick_impl(self):
         now = time.time()
         dt = now - self.last_tick
         self.last_tick = now
