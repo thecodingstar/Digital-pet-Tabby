@@ -78,10 +78,14 @@ real key in a tracked file.
 
 ## How Tabby works
 
-### Two modes
-- **react** — when Claude Code is busy, sprites/speech follow the real state
-  (see `REACTIVE` map in `taskbar_mascot_cat.py`).
-- **brain** — when idle, `brain.py` drives behaviour autonomously.
+### Two modes (loosely coupled — her brain always runs)
+- **brain** (default) — `brain.py` drives behaviour autonomously; `brain.tick`
+  runs every tick regardless of Claude.
+- **react** — Claude only commandeers the animation when she *chooses* to watch
+  your work (episodic: on each work-start she rolls `p≈0.2+0.5·curiosity+social/300`
+  for a 6–16s window — `WORK_STATES`), or for a brief `RESULT_REACT_S` reaction to
+  a result event (`RESULT_STATES`). Urgent drives always override. So she mostly
+  does her own thing while you code, glancing over when she feels like it.
 
 ### State source
 Reads `~/.claude/statusline/state/<session>.json` (written by

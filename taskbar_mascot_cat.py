@@ -66,6 +66,12 @@ REACTIVE = {
     "auth_success":     (["happy"], 800, 0),
 }
 
+# Loose coupling: continuous "work" states she may CHOOSE to watch vs discrete
+# "result" states she reacts to briefly. Otherwise her own brain drives.
+WORK_STATES = {"thinking", "tool_running", "subagent_running"}
+RESULT_STATES = {"tool_success", "tool_failure", "question", "permission", "done", "auth_success"}
+RESULT_REACT_S = 2.5      # how long a result event holds the animation
+
 
 class APPBARDATA(ctypes.Structure):
     _fields_ = [("cbSize", ctypes.wintypes.DWORD),
@@ -381,6 +387,11 @@ class Mascot(QWidget):
         self.info = InfoPanel()
         self.qbubble = QuestionBubble(self._on_quiz_answer)   # interactive quiz (C)
         self.next_quiz_check = time.time() + 60               # first check after 1 min
+        # loose Claude coupling: she follows your work only when she chooses to
+        self._watching = False
+        self._watch_until = 0.0
+        self._was_working = False
+        self._react_until = 0.0       # brief reaction window after a result event
         self.hovering = False
         self.mode = "brain"                     # "brain" | "react"
         self.src_key = None                     # id of current frame list (reset detector)
@@ -608,15 +619,29 @@ class Mascot(QWidget):
                 ev, gap = evmap[cs]
                 if not (cs == "tool_failure" and style == "space"):   # quiet on errors
                     self._emote(ev, gap, self._ctx())
+                self._react_until = now + RESULT_REACT_S   # a brief glance, not a lock
             self.prev_cs = cs
 
-        # Claude busy -> react to real state; otherwise the brain drives.
-        if cs and cs != "idle" and cs in REACTIVE:
+        # Her brain always runs; Claude only commandeers the animation when she
+        # CHOOSES to watch your work, or for a brief result reaction. Otherwise
+        # she does her own thing while you code (loose coupling).
+        self.brain.tick(dt)
+        working = cs in WORK_STATES
+        if working and not self._was_working:        # you just started working
+            tr = self.brain.hints.get("traits", {})
+            p = 0.20 + 0.50 * float(tr.get("curiosity", 0.6)) + self.brain.social / 300.0
+            self._watching = random.random() < p     # does she tune in this time?
+            self._watch_until = now + random.uniform(6, 16)
+        self._was_working = working
+        urgent = self.brain.urgent_drive() is not None
+        react = (not urgent) and cs in REACTIVE and (
+            (working and self._watching and now < self._watch_until)
+            or (cs in RESULT_STATES and now < self._react_until))
+        if react:
             self.mode = "react"
             self.frames, self.period, self.speed = REACTIVE[cs]
         else:
             self.mode = "brain"
-            self.brain.tick(dt)
             self.frames = self.brain.frames
             self.period = self.brain.period
             self.speed = self.brain.speed
