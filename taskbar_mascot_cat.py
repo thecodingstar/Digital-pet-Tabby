@@ -27,6 +27,7 @@ DOING = {
     "loaf": "loafing", "knead": "making biscuits", "ponder": "deep in thought",
     "watch": "watching you", "anticipate": "watching for you",
     "beg": "begging for food", "seek": "wants attention", "cower": "scared!",
+    "startle": "startled!", "angry": "annoyed", "sad": "a bit down",
 }
 REACT_DOING = {
     "tool_running": "watching you work", "subagent_running": "following along",

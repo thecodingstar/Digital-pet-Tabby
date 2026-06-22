@@ -26,7 +26,7 @@ BEHAVIORS = {
     "idle":    dict(frames=["idle"] * 8 + ["idle_blink"], period=220,  speed=0, dur=(2.5, 5),  energy=+0.4, base=3),
     "sit":     dict(frames=["sitting"],                   period=1000, speed=0, dur=(4, 9),    energy=+2.0, base=4),
     "sleep":   dict(frames=["sleeping"],                  period=1000, speed=0, dur=(12, 28),  energy=+7.0, base=3),
-    "stretch": dict(frames=["stretch"],                   period=900,  speed=0, dur=(1.5, 2.6), energy=-0.5, base=0),
+    "stretch": dict(frames=["stretch"],                   period=900,  speed=0, dur=(1.5, 2.6), energy=-0.5, base=1),
     "wander":  dict(frames=W,                             period=120,  speed=3, dur=(4, 9),    energy=-2.5, base=4),
     "zoomies": dict(frames=R,                             period=90,   speed=7, dur=(1.5, 3.5), energy=-6.0, base=1),
     "play":    dict(frames=["playful"],                   period=1000, speed=0, dur=(2, 4),    energy=-3.0, base=2),
@@ -44,6 +44,9 @@ BEHAVIORS = {
     "beg":     dict(frames=["hungry"],                    period=1000, speed=0, dur=(2, 4),    energy=-0.3, base=0),
     "seek":    dict(frames=["alert", "curious"],          period=420,  speed=2, dur=(2, 4),    energy=-0.6, base=0),
     "cower":   dict(frames=["scared"],                    period=1000, speed=0, dur=(2, 5),    energy=-0.3, base=0),
+    "startle": dict(frames=["surprised"],                 period=600,  speed=0, dur=(1.2, 2.2), energy=-0.2, base=0),
+    "angry":   dict(frames=["angry"],                     period=700,  speed=0, dur=(1.5, 3),  energy=-0.3, base=0),
+    "sad":     dict(frames=["sad"],                       period=1000, speed=0, dur=(2, 4),    energy=-0.1, base=0),
     # anticipation: perks up just before your usual coding hours (X6). base=0 ->
     # never random, only triggered by pre_active().
     "anticipate": dict(frames=["alert", "curious"],       period=480,  speed=0, dur=(2, 4),    energy=-0.2, base=0),
@@ -243,7 +246,14 @@ class Brain:
         if time.time() - self._last_console_t > 30:
             self.trust = max(0.0, self.trust - 0.03)
         self.fear = _clamp(self.fear + effective)
-        self._set("cower")
+        # reaction sprite: an error storm makes her fed-up (angry), a big fright
+        # makes her cower (scared), a one-off just startles her (surprised).
+        if self.jumpiness >= 0.6:
+            self._set("angry")
+        elif self.fear >= URGENT["fear"]:
+            self._set("cower")
+        else:
+            self._set("startle")
         return "scared"
 
     def force_sleep(self):
@@ -346,7 +356,7 @@ class Brain:
         if name == "grumpy":
             return 1.4 if (e < 35 or self.hunger > 55) else 0.25
         if name == "stretch":
-            return 0.0
+            return 0.7        # a real cat stretches often, not only on waking
         return 1.0
 
     def _recent_penalty(self, name, now):
@@ -364,6 +374,9 @@ class Brain:
         if u == "fear":   return "cower"
         if u == "hunger": return "beg"
         if u == "social": return "seek"
+        # genuinely down (post-fright / long-ignored / starving) -> look sad
+        if self.valence < 30 and random.random() < 0.6:
+            return "sad"
         # X6: anticipation. Just before your usual coding hours, perk up and watch.
         if self.pre_active() and random.random() < 0.85:
             return "anticipate"
@@ -418,7 +431,7 @@ class Brain:
         self._elapsed += dt
 
         # a sudden fear spike interrupts whatever we were doing
-        if self.fear >= URGENT["fear"] and self.behavior != "cower":
+        if self.fear >= URGENT["fear"] and self.behavior not in ("cower", "angry"):
             self._set("cower")
             return
         if self._elapsed < self._dur:
