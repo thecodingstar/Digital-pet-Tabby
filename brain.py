@@ -99,6 +99,8 @@ class Brain:
         self.active_hours = [0.0] * 24   # learned user activity histogram (B5/X4)
         self._rhythm_last_ts = time.time()   # last note_activity time, for decay (X4)
         self._last_console_t = 0.0
+        self._pet_streak = 0           # consecutive pets in a short window
+        self._last_pet_t = 0.0
         self._behav_hist = deque(maxlen=BEHAV_HISTORY_N)   # (name, t) for B6
         self.behavior_counts = {}      # behaviour -> times chosen (usage telemetry)
         self.behavior_secs = {}        # behaviour -> seconds spent (usage telemetry)
@@ -200,16 +202,32 @@ class Brain:
         return "fed"
 
     def receive_pet(self):
-        """Petting lowers loneliness; if scared, it consoles (big fear drop)."""
+        """Petting lowers loneliness and, crucially, makes her FEEL loved: it
+        brightens her mood (valence/arousal), builds a little trust, and the more
+        you pet in a short window the happier she gets. If scared, it consoles."""
         self._reinforce(self.behavior, 1.0)    # that behaviour earned attention
         self._note_active()
+        now = time.time()
         consoled = self.fear > 35
-        if consoled:                            # consoling builds trust (B4)
+        # streak: consecutive pets within 6s escalate the affection response
+        self._pet_streak = self._pet_streak + 1 if now - self._last_pet_t < 6 else 1
+        self._last_pet_t = now
+        if consoled:                            # consoling builds trust most (B4)
             self.trust = min(1.0, self.trust + 0.1)
-            self._last_console_t = time.time()
+            self._last_console_t = now
+        else:                                   # plain affection still warms her
+            self.trust = min(1.0, self.trust + 0.03)
         self.fear = _clamp(self.fear - (55 if consoled else 8))
         self.social = _clamp(self.social - 30)
-        self._set("groom" if not consoled else "happy")
+        # the emotional payoff: mood actually brightens, and stacks with petting
+        self.valence = _clamp(self.valence + (10 if consoled else 14))
+        self.arousal = _clamp(self.arousal + min(6 + 3 * self._pet_streak, 18))
+        if consoled:
+            self._set("happy")                  # relief
+        elif self._pet_streak >= 3:
+            self._set("play")                   # blissed-out, wants to play
+        else:
+            self._set("groom")                  # content, heart-eyes (love sprite)
         return "consoled" if consoled else "petted"
 
     def scare(self, amount=70.0):
