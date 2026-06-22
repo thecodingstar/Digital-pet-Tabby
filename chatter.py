@@ -227,6 +227,30 @@ QUESTIONS = [
                  {"label": "dogs"}]},
 ]
 
+
+def _pref_extract(txt):
+    """Best-effort, intentionally lossy keyword map of one quiz text -> partial
+    prefs (X1). LLM-generated questions have arbitrary ids, so we key on the
+    text, not the id. Returns only the fields a keyword matched."""
+    d = {}
+    if "chill" in txt:
+        d["chattiness"] = -1.0
+    elif "chatty" in txt:
+        d["chattiness"] = +1.0
+    if "space" in txt or "quiet" in txt:
+        d["comfort_style"] = "space"
+    elif "cheer" in txt:
+        d["comfort_style"] = "cheer"
+    if "night" in txt:
+        d["chronotype"] = "night"
+    elif "early" in txt or "bird" in txt:
+        d["chronotype"] = "early"
+    if "fast" in txt or "sprint" in txt:
+        d["pace"] = "fast"
+    elif "slow" in txt or "steady" in txt:
+        d["pace"] = "slow"
+    return d
+
 # canned fallback lines, used when no LLM is configured/reachable
 CANNED = {
     "pet":            ["*purrs*", "mrrp <3", "more pets pls", "*leans in*", "prrr~"],
@@ -756,6 +780,41 @@ class Cat:
         with self._lock:
             t = self.state["traits"]
         return max(0.5, min(1.8, 1.0 + (t["shyness"] - t["playfulness"]) * 0.6))
+
+    # --- cross-brain seam: what she's learned, as neutral brain hints (X1) ---
+    def behavior_hints(self):
+        """Distill traits + quiz prefs + schedule confidence into a neutral hint
+        bag the behaviour brain can consume. Holds the lock, no network, cheap.
+        Neutral on cold start (zero facts / empty profile). Pref distillation is
+        best-effort and INTENTIONALLY LOSSY: it keyword-matches the stored answer
+        text first (decisive), then the question text to fill gaps; later answers
+        (by ts) override earlier ones. Tolerates malformed/partial records."""
+        with self._lock:
+            t = self.state.get("traits", {}) or {}
+            traits = {k: float(t.get(k, 0.5)) for k in
+                      ("playfulness", "curiosity", "shyness", "sass")}
+            profile = self.state.get("user_profile", {}) or {}
+            facts = self.state.get("user_facts", []) or []
+            items = [v for v in profile.values() if isinstance(v, dict)]
+            items.sort(key=lambda v: v.get("ts", 0))
+            prefs = {"chattiness": None, "comfort_style": None,
+                     "chronotype": None, "pace": None}
+            for v in items:
+                ans = _pref_extract(str(v.get("a", "")).lower())   # answer wins
+                que = _pref_extract(str(v.get("q", "")).lower())   # then question
+                for k in prefs:
+                    if k in ans:
+                        prefs[k] = ans[k]
+                    elif k in que:
+                        prefs[k] = que[k]
+            sched = 0.0
+            for f in facts:
+                if isinstance(f, dict) and f.get("category") == "schedule":
+                    try:
+                        sched = max(sched, float(f.get("confidence", 0.0)))
+                    except (TypeError, ValueError):
+                        pass
+            return {"traits": traits, "prefs": prefs, "schedule_conf": sched}
 
     # --- memory ---------------------------------------------------------
     def _observe(self, note):
