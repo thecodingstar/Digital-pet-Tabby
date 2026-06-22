@@ -25,8 +25,8 @@ DOING = {
     "play": "playing", "curious": "being nosy", "happy": "feeling happy",
     "think": "pondering", "groom": "grooming", "grumpy": "grumpy",
     "loaf": "loafing", "knead": "making biscuits", "ponder": "deep in thought",
-    "watch": "watching you", "beg": "begging for food",
-    "seek": "wants attention", "cower": "scared!",
+    "watch": "watching you", "anticipate": "watching for you",
+    "beg": "begging for food", "seek": "wants attention", "cower": "scared!",
 }
 REACT_DOING = {
     "tool_running": "watching you work", "subagent_running": "following along",
@@ -373,6 +373,7 @@ class Mascot(QWidget):
         self.cat = Cat()
         self.brain = Brain()                    # autonomous behaviour engine
         self.brain.load_drives(self.cat.get_drives())   # survive restarts
+        self.brain.apply_hints(self.cat.behavior_hints())   # X7: learned -> behaviour
         self.bubble = SpeechBubble()
         self.info = InfoPanel()
         self.qbubble = QuestionBubble(self._on_quiz_answer)   # interactive quiz (C)
@@ -452,6 +453,7 @@ class Mascot(QWidget):
 
     def _on_quiz_answer(self, q, idx):
         line = self.cat.answer_question(q, idx)
+        self.brain.apply_hints(self.cat.behavior_hints())   # X8: act on it right away
         if line:
             self._show_line(line)
             self.last_say = 0
@@ -577,10 +579,15 @@ class Mascot(QWidget):
         # react to Claude state *transitions* (talk + remember), throttled
         if cs != self.prev_cs:
             info = st.get("lastToolName") if st else None
+            style = self.brain.hints.get("prefs", {}).get("comfort_style")  # X9
             if cs == "tool_failure":
-                self.brain.scare(45)         # errors startle the cat
+                self.brain.scare(45)         # errors startle her (modulated in scare)
                 self.cat.report_outcome(0.0)  # a scare = the last line didn't help
+                if style == "cheer":         # they want cheering -> speak now
+                    self.last_say = 0
             if cs in ("tool_success", "tool_failure", "question", "done", "auth_success"):
+                if cs in ("tool_success", "tool_failure", "question", "done"):
+                    self.brain.note_activity()   # X9: learn coding hours from coding
                 self.cat.observe_claude(cs, info)
                 evmap = {"tool_success": ("claude_success", 18),
                          "tool_failure": ("claude_failure", 6),
@@ -588,7 +595,8 @@ class Mascot(QWidget):
                          "done": ("claude_done", 25),
                          "auth_success": ("greet", 30)}
                 ev, gap = evmap[cs]
-                self._emote(ev, gap, self._ctx())
+                if not (cs == "tool_failure" and style == "space"):   # quiet on errors
+                    self._emote(ev, gap, self._ctx())
             self.prev_cs = cs
 
         # Claude busy -> react to real state; otherwise the brain drives.
@@ -660,6 +668,8 @@ class Mascot(QWidget):
         if self.hovering:
             if self.mode == "react":
                 doing = REACT_DOING.get(self.cs, "with you")
+            elif self.brain.pre_active():        # X10: anticipating your session
+                doing = "watching for you"
             else:
                 doing = DOING.get(self.brain.behavior, self.brain.behavior)
             self.info.update_info(doing, self.brain.drives(),
@@ -692,8 +702,11 @@ class Mascot(QWidget):
             self.clearMask()
 
     def persist(self):
-        """Save personality + current drives (called periodically and on quit)."""
+        """Save personality + current drives (called periodically and on quit).
+        Also refresh behaviour hints on this ~30s cadence (X8) — it takes the
+        chatter lock, so never per tick."""
         self.cat.set_drives(self.brain.snapshot_drives())
+        self.brain.apply_hints(self.cat.behavior_hints())
         self.cat.save()
         self.cat.save_know()
 
