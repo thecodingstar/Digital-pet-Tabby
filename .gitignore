@@ -20,6 +20,7 @@ cat_config.json
 cat_state.json
 cat_brain.json
 cat_metrics.json
+dashboard.html
 .env
 .env.local
 statusline/state/

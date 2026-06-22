@@ -493,11 +493,14 @@ class Mascot(QWidget):
         a_pet = m.addAction("✋  Pet")
         a_sleep = m.addAction("😴  Sleep")
         a_ask = m.addAction("💬  Ask me something")
+        a_stats = m.addAction("📊  Stats")
         m.addSeparator()
         a_quit = m.addAction("✖  Quit")
         act = m.exec_(gpos)
         if act == a_ask:
             self.cat.ask_now()               # force a quiz card (manual trigger)
+        elif act == a_stats:
+            self._open_dashboard()
         elif act == a_feed:
             self.brain.feed(); self.cat.feed(); self.cat.report_outcome(1.0)
             self.last_say = 0
@@ -512,6 +515,15 @@ class Mascot(QWidget):
             self.qbubble.dismiss()
             self.persist()
             QApplication.instance().quit()
+
+    def _open_dashboard(self):
+        """Regenerate the brain dashboard from the latest state and open it."""
+        try:
+            self.persist()                   # flush newest data to disk first
+            import webbrowser, dashboard
+            webbrowser.open(dashboard.build().as_uri())
+        except Exception as e:
+            sys.stderr.write(f"[mascot] dashboard failed: {e}\n")
 
     def enterEvent(self, _):
         self.hovering = True
