@@ -71,6 +71,22 @@ def _clean_line(s):
     return s
 
 
+def _clean_q(s, maxlen=90):
+    """Like _clean_line but keeps a longer span (questions/labels run longer than
+    the 46-char speech cap). Printable ASCII, single line, must contain letters."""
+    if not s:
+        return None
+    s = s.strip().strip('"').strip("'").strip()
+    s = s.splitlines()[0] if s else ""
+    s = "".join(ch for ch in s if 32 <= ord(ch) < 127)
+    s = re.sub(r"\s+", " ", s).strip()
+    if len(s) > maxlen:
+        s = s[:maxlen].rsplit(" ", 1)[0].strip()
+    if len(s) < 3 or not re.search(r"[a-zA-Z]", s):
+        return None
+    return s
+
+
 def _similar(line, pool):
     """True if `line` is a near-duplicate of any line already in `pool`."""
     lv = _vec(line)
@@ -140,16 +156,23 @@ STATE = HERE / "cat_state.json"
 KNOW = HERE / "cat_brain.json"      # offline learned knowledge (grows over time)
 METRICS = HERE / "cat_metrics.json"  # telemetry (fast-churn, gitignored)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 RECALL_MODE = "structured"  # "structured" (default) | "vector" (legacy fallback)
 
 DAILY_BUDGET = 600       # max API calls/day (Groq free tier is 1000)
 LINE_CAP = 24            # cached lines kept per event
 COVER_CAP = 16           # learned neighbours at which local coverage is "full"
 MIN_KEEP = 6             # never evict an event below this many lines
-COVER_SIM_MIN = 0.60     # similarity that counts as a covered neighbour (M3)
+COVER_SIM_MIN = 0.50     # similarity that counts as a covered neighbour (M3)
 REWARD_ALPHA = 0.25      # per-line reward EWMA rate (M2)
-ANTIREPEAT_K = 8         # session anti-repeat ring size (M5)
+ANTIREPEAT_K = 16        # session anti-repeat ring size (M5)
+REPEAT_PENALTY = 0.10    # EWMA nudge toward 0.3 when a served line repeats (M8)
+# Once an event's pool fills, accumulated memory should actually get used —
+# without this the policy stayed API-bound because per-context coverage alone
+# rarely crossed threshold. Maturity scales local recall up as the pool fills (M8).
+MATURE_WEIGHT = 0.30     # weight of pool-maturity in local_prob (M8)
+# Low-stakes, repetitive chatter doesn't need freshness — recall locally, save API.
+LOCAL_FLOOR = {"musing": 0.6, "greet": 0.6, "wake": 0.5, "sleep": 0.5}
 FACT_DROP = 0.20         # drop user-facts below this confidence (R1)
 FACT_CAP_PER_CAT = 3     # facts kept per category (R1)
 FACT_CONF_ALPHA = 0.30   # fact confidence EWMA rate (R1)
@@ -170,10 +193,39 @@ DEFAULT_STATE = {
     "interactions": 0,
     "traits": {"playfulness": 0.6, "curiosity": 0.7, "shyness": 0.4, "sass": 0.5},
     "user_facts": [],          # things the cat has inferred about the human
+    "user_profile": {},        # q_id -> {q, a, ts}: answers to her quiz (C)
+    "quiz": {"last_t": 0, "asked": [], "recent_q": []},   # quiz bookkeeping (C)
     "recent": [],              # rolling log of recent observations (strings)
     "mood": "content",
     "last_seen": 0.0,
 }
+
+# --- get-to-know-you quiz (C): she asks, you click, she adapts ---------------
+QUIZ_MIN_AFFECTION = 25      # only ask once she's comfortable with you
+QUIZ_COOLDOWN = 3 * 3600     # seconds between questions (don't nag)
+QUIZ_MAX = 40                # lifetime cap on stored profile answers
+TRAIT_NUDGE = 0.08           # how far one answer shifts a personality trait
+# Static fallback bank (used offline / when the API question can't be parsed).
+# `traits` on an option nudges her own personality toward complementing you.
+QUESTIONS = [
+    {"id": "chatty", "text": "want me chatty or chill while you work?",
+     "options": [{"label": "chatty", "traits": {"playfulness": +1}},
+                 {"label": "chill", "traits": {"shyness": +1}}]},
+    {"id": "humor", "text": "you like me sweet or a little sassy?",
+     "options": [{"label": "sweet", "traits": {"sass": -1}},
+                 {"label": "sassy", "traits": {"sass": +1}}]},
+    {"id": "night", "text": "night owl or early bird?",
+     "options": [{"label": "night owl"}, {"label": "early bird"}]},
+    {"id": "cheer", "text": "when code breaks, want cheering or quiet?",
+     "options": [{"label": "cheer me up", "traits": {"playfulness": +1}},
+                 {"label": "give me space", "traits": {"shyness": +1}}]},
+    {"id": "pace", "text": "do you like fast sprints or slow and steady?",
+     "options": [{"label": "fast sprints", "traits": {"curiosity": +1}},
+                 {"label": "slow + steady"}]},
+    {"id": "pet", "text": "more of a cat person or dog person?",
+     "options": [{"label": "cats, obviously", "traits": {"sass": +1}},
+                 {"label": "dogs"}]},
+]
 
 # canned fallback lines, used when no LLM is configured/reachable
 CANNED = {
@@ -216,6 +268,8 @@ class Cat:
         self._out = deque()        # ready lines
         self._recent_ids = deque(maxlen=ANTIREPEAT_K)   # session anti-repeat (M5)
         self._last_served = None   # (event, line) most recently shown, for reward
+        self._q_ready = None       # a built quiz question waiting for the UI (C)
+        self._q_pending = False    # a quiz question is being built on the worker (C)
         self._metrics = {"served": 0, "local_hits": 0, "api": 0,
                          "reflection": 0, "sim_sum": 0.0, "reward_sum": 0.0,
                          "repeats": 0}
@@ -439,7 +493,10 @@ class Cat:
     def _local_prob_ctx(self, event, cstruct, qflat):
         cov = self._ctx_coverage(event, cstruct, qflat)
         bp = self._calls_today() / DAILY_BUDGET
-        return max(0.0, min(0.95, 0.10 + 0.55 * cov + 0.45 * bp))
+        pool = self.know["lines"].get(event, [])
+        mature = min(len(pool), LINE_CAP) / LINE_CAP        # M8: how full this event is
+        base = 0.10 + 0.45 * cov + MATURE_WEIGHT * mature + 0.30 * bp
+        return max(LOCAL_FLOOR.get(event, 0.0), min(0.95, base))
 
     def _candidates(self, event, cstruct, qflat):
         """Own-event lines (weight 1.0) plus, when the current context is thinly
@@ -493,6 +550,10 @@ class Cat:
             self._last_served = (event, None)
         if line in self._recent_ids:
             m["repeats"] += 1
+            if info and info[1] is not None:               # M8: over-served lines
+                e = info[1]                                # lose reward so eviction
+                e["reward"] = ((1 - REPEAT_PENALTY) * e.get("reward", 0.5)
+                               + REPEAT_PENALTY * 0.3)      # eventually drops them
         self._recent_ids.append(line)
 
     def _find_entry(self, event, line):
@@ -577,6 +638,116 @@ class Cat:
         with self._lock:
             return self._out.popleft() if self._out else None
 
+    # --- get-to-know-you quiz (C) --------------------------------------
+    def maybe_ask(self):
+        """UI calls this when idle. If it's time, enqueue a question for the
+        worker to build (API-generated for freshness, static-bank fallback).
+        Non-blocking; retrieve the result with poll_question()."""
+        with self._lock:
+            if self._q_ready or self._q_pending:
+                return
+            if self.state.get("affection", 0) < QUIZ_MIN_AFFECTION:
+                return
+            if len(self.state.get("user_profile", {})) >= QUIZ_MAX:
+                return
+            qz = self.state.setdefault("quiz", {"last_t": 0, "asked": [], "recent_q": []})
+            if time.time() - qz.get("last_t", 0) < QUIZ_COOLDOWN:
+                return
+            self._q_pending = True
+            self._req.append(("__quiz__", {}))
+
+    def poll_question(self):
+        """Return a built question dict {id, text, options:[{label,..}]} or None."""
+        with self._lock:
+            q, self._q_ready = self._q_ready, None
+            return q
+
+    def _build_question(self):
+        """Worker-thread: produce a fresh question, preferring the API so every
+        prompt is unique and learns more, falling back to the static bank."""
+        with self._lock:
+            asked = set(self.state.get("quiz", {}).get("asked", []))
+            enabled = self.llm_enabled and self._budget_left()
+        q = self._llm_question() if enabled else None
+        if not q:
+            with self._lock:
+                pool = [x for x in QUESTIONS if x["id"] not in asked] or QUESTIONS
+                base = random.choice(pool)
+            q = {"id": base["id"], "text": base["text"],
+                 "options": [dict(o) for o in base["options"]]}
+        with self._lock:
+            self._q_ready = q
+            self._q_pending = False
+
+    def _llm_question(self):
+        """Ask the model for ONE fresh question + 2-3 short answer options,
+        formatted as 'question | opt | opt'. Returns a question dict or None."""
+        try:
+            with self._lock:
+                sysp = self._system_prompt()
+                recent_q = "; ".join(self.state.get("quiz", {}).get("recent_q", [])[-6:])
+            messages = [
+                {"role": "system", "content": sysp},
+                {"role": "user", "content":
+                 "Ask the human ONE short, friendly get-to-know-you question so you "
+                 "can learn their personality, mood, or how they like to work. Then "
+                 "give 2 or 3 brief answer options. Output EXACTLY one line: "
+                 "question | option1 | option2 [| option3]. Each option <= 4 words, "
+                 "lowercase, plain ascii, no quotes. "
+                 f"Do NOT repeat any of these: {recent_q or 'none yet'}."},
+            ]
+            out = self._post_chat(messages, 64, 1.0)        # network, no lock held
+        except Exception:
+            return None
+        parts = [p for p in (out or "").split("|")]
+        if len(parts) < 3:
+            return None
+        text = _clean_q(parts[0])
+        opts = [_clean_q(o, 24) for o in parts[1:4]]
+        opts = [o for o in opts if o]
+        if not text or len(opts) < 2:
+            return None
+        with self._lock:
+            self._note_call()
+        return {"id": "api_" + str(int(time.time())),
+                "text": text, "options": [{"label": o} for o in opts]}
+
+    def answer_question(self, q, choice_idx):
+        """Record the human's answer: store it in the profile, nudge her traits
+        toward complementing them, crystallize a fact. Returns a thank-you line."""
+        if not q:
+            return None
+        with self._lock:
+            opts = q.get("options", [])
+            if not (0 <= choice_idx < len(opts)):
+                return None
+            label = opts[choice_idx].get("label", "")
+            qz = self.state.setdefault("quiz", {"last_t": 0, "asked": [], "recent_q": []})
+            qz["last_t"] = time.time()
+            if q["id"] not in qz.setdefault("asked", []):
+                qz["asked"].append(q["id"])
+            qz.setdefault("recent_q", []).append(q["text"])
+            del qz["recent_q"][:-12]
+            self.state.setdefault("user_profile", {})[q["id"]] = {
+                "q": q["text"], "a": label, "ts": int(time.time())}
+            # nudge personality traits if the option carries them (static bank)
+            for tr, sign in (opts[choice_idx].get("traits") or {}).items():
+                if tr in self.state["traits"]:
+                    v = self.state["traits"][tr] + TRAIT_NUDGE * sign
+                    self.state["traits"][tr] = max(0.0, min(1.0, v))
+            self.state["affection"] = min(100, self.state.get("affection", 0) + 1)
+            self._observe(f"human told me: {q['text']} -> {label}")
+            self._merge_fact("temperament", f"human likes {label}")
+        self.save()
+        return f"ooh, {label}! noted ~"
+
+    def quiet_factor(self):
+        """>1 = she should talk less (shy/calm), <1 = chattier. Scales the UI's
+        idle musing interval so her cadence matches your stated preference (C)."""
+        with self._lock:
+            t = self.state["traits"]
+        return max(0.5, min(1.8, 1.0 + (t["shyness"] - t["playfulness"]) * 0.6))
+
     # --- memory ---------------------------------------------------------
     def _observe(self, note):
         # caller must hold self._lock
@@ -597,6 +768,11 @@ class Cat:
                 time.sleep(0.1)
                 continue
             event, ctx = item
+            if event == "__quiz__":                 # build a get-to-know-you question
+                self._build_question()
+                self.save()
+                self.save_know()
+                continue
             line = self._generate(event, ctx)
             if line:
                 with self._lock:
@@ -689,6 +865,9 @@ class Cat:
                       reverse=True)
         texts = [f["text"] for f in recs[:5] if isinstance(f, dict)]
         facts = "; ".join(texts) or "nothing yet"
+        prof = s.get("user_profile", {})
+        prefs = "; ".join(v["a"] for v in list(prof.values())[-4:]
+                          if isinstance(v, dict) and v.get("a")) or "still learning"
         return (
             f"You are {s['name']}, a pixel cat that lives on the human's Windows "
             f"taskbar and watches them code with Claude. You speak in very short, "
@@ -696,6 +875,7 @@ class Cat:
             f"curiosity {t['curiosity']:.1f}, shyness {t['shyness']:.1f}, sass {t['sass']:.1f}. "
             f"You are {_affection_stage(s['affection'])}. Current mood: {s['mood']}. "
             f"It is {_time_of_day()}. What you've noticed about the human: {facts}. "
+            f"What the human told you they like: {prefs}. "
             f"Rules: reply with ONE line, max 10 words, lowercase, cat-like, "
             f"plain ASCII text only, no quotes, no emojis, no markdown. Stay in character."
         )

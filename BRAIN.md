@@ -70,6 +70,12 @@ A **homeostatic drive model** with learning on top.
 3. Scripted wake-up: `sleep → stretch → sit`. Finishing groom/sleep/stretch gives a
    small **contentment** valence bump (B3).
 
+### Idle flavour & presence (B)
+Beyond the core set, idle adds `loaf / knead / ponder / watch` (all reuse existing
+sprites). And `_notice_cursor` (UI): when the mouse comes near her on the taskbar
+she turns to face it and perks up (`watch`) — a light, no-extra-UI way to feel the
+human's presence. She holds still while a quiz card is on screen.
+
 ### Learning & lifelike state
 - **Behaviour reinforcement (B2):** `affinity` per behaviour (EWMA 0.20, bounded
   [0.2, 1.0]). Pet/feed while doing X raises X's affinity; a scare lowers the
@@ -112,6 +118,17 @@ affection_tier, daypart, claude_streak}`. Similarity = weighted field match
 normalized 0..1. Interpretable, collision-free, zero-dep. Legacy hashed-cosine
 ("vector") retained as fallback. Event is always a hard filter.
 
+### Maturity-weighted local use (M8)
+`local_prob = clamp(0.10 + 0.45·ctx_coverage + 0.30·pool_maturity + 0.30·budget_pressure)`
+with `pool_maturity = min(lines_for_event, LINE_CAP)/LINE_CAP`, plus a per-event
+floor (`LOCAL_FLOOR`: musing/greet 0.6, wake/sleep 0.5). Earlier the policy stayed
+API-bound — per-context coverage alone rarely crossed threshold, so accumulated
+memory went unused. Maturity makes a filled pool actually get recalled. A served
+**repeat** also nudges that line's reward toward 0.3 (`REPEAT_PENALTY`) so eviction
+drops over-served lines, and the anti-repeat ring is 16. Verified in `sim_harness.py`:
+local_hit_rate ~0.22 → ~0.61, late-hit ~0.22 → ~0.75, API calls roughly halved, no
+repeat/sim/reward regression.
+
 ### Reward-weighted recall (M2)
 Each line carries `{reward, uses, last_used}`. The mascot reports outcomes within
 the interaction (pet/feed/console → 1.0, scare → 0.0); reward is EWMA (α=0.25).
@@ -132,6 +149,19 @@ never below `MIN_KEEP=6`. Keeps high-performing, distinct lines.
 LLM calls include her top-reward lines for the event as few-shot "her voice",
 current facts, the context, and the MAX_LINE/ASCII constraints — so new lines stay
 on-voice and pass the quality gate.
+
+### Get-to-know-you quiz (C) — she asks, you click, she adapts
+When idle and comfortable (`affection ≥ QUIZ_MIN_AFFECTION`, `QUIZ_COOLDOWN`
+between asks, lifetime cap `QUIZ_MAX`), Tabby poses a short question with 2–3
+clickable answers (UI `QuestionBubble`). Questions are **API-generated for
+uniqueness** (`_llm_question`, parsed from `question | opt | opt`), falling back
+to a static `QUESTIONS` bank offline. The answer is stored in `user_profile`
+(`q_id → {q, a, ts}`), crystallized as a temperament fact, and — for static-bank
+options carrying `traits` — nudges her own personality (`TRAIT_NUDGE`, bounded).
+`user_profile` feeds the system prompt ("what the human told you they like: …")
+and `quiet_factor()` scales the idle musing cadence to her learned chattiness.
+All on the worker thread; `maybe_ask`/`poll_question`/`answer_question` mirror
+the non-blocking say/poll pattern.
 
 ### Reflection → confidence facts (R1/R2)
 Every ~8 interactions one LLM call distils recent observations into a
@@ -195,9 +225,11 @@ rising learning curve, no drive runaway over a 30-min behaviour sim.
 | `RECALL_MODE` | chatter.py | structured (default) \| vector (legacy) |
 | `DAILY_BUDGET` 600 | chatter.py | max API calls/day |
 | `LINE_CAP` 24 / `MIN_KEEP` 6 | chatter.py | per-event cap / eviction floor |
-| `COVER_CAP` 16 / `COVER_SIM_MIN` 0.60 | chatter.py | coverage neighbours / threshold |
-| `REWARD_ALPHA` 0.25 | chatter.py | line reward EWMA |
-| `ANTIREPEAT_K` 8 | chatter.py | session anti-repeat ring |
+| `COVER_CAP` 16 / `COVER_SIM_MIN` 0.50 | chatter.py | coverage neighbours / threshold |
+| `MATURE_WEIGHT` 0.30 / `LOCAL_FLOOR` | chatter.py | pool-maturity weight / per-event local-prob floors (M8) |
+| `REWARD_ALPHA` 0.25 / `REPEAT_PENALTY` 0.10 | chatter.py | line reward EWMA / served-repeat reward nudge |
+| `ANTIREPEAT_K` 16 | chatter.py | session anti-repeat ring |
+| `QUIZ_MIN_AFFECTION` 25 / `QUIZ_COOLDOWN` / `QUIZ_MAX` / `TRAIT_NUDGE` | chatter.py | quiz gating + trait nudge (C) |
 | `FIELD_WEIGHTS` | chatter.py | structured similarity weights |
 | `FACT_*`, `FACT_CATS` | chatter.py | fact confidence/cap/categories |
 | `REFLECT_BUDGET_PCT` 0.10 | chatter.py | reflection budget reserve |

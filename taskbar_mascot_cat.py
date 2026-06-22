@@ -9,10 +9,10 @@ Run: python taskbar_mascot_cat.py
 """
 import sys, time, ctypes, ctypes.wintypes, json, os, glob, random
 from pathlib import Path
-from PyQt5.QtWidgets import QApplication, QWidget, QMenu
+from PyQt5.QtWidgets import QApplication, QWidget, QMenu, QPushButton
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import (QPixmap, QPainter, QColor, QFont, QFontMetrics,
-                         QPainterPath, QPen, QRegion)
+                         QPainterPath, QPen, QRegion, QCursor)
 from brain import Brain
 from chatter import Cat
 
@@ -24,7 +24,9 @@ DOING = {
     "stretch": "stretching", "wander": "wandering about", "zoomies": "ZOOMIES!",
     "play": "playing", "curious": "being nosy", "happy": "feeling happy",
     "think": "pondering", "groom": "grooming", "grumpy": "grumpy",
-    "beg": "begging for food", "seek": "wants attention", "cower": "scared!",
+    "loaf": "loafing", "knead": "making biscuits", "ponder": "deep in thought",
+    "watch": "watching you", "beg": "begging for food",
+    "seek": "wants attention", "cower": "scared!",
 }
 REACT_DOING = {
     "tool_running": "watching you work", "subagent_running": "following along",
@@ -162,6 +164,100 @@ class SpeechBubble(QWidget):
         p.end()
 
 
+class QuestionBubble(QWidget):
+    """Interactive card: Tabby asks a get-to-know-you question, the human clicks
+    an answer. Real buttons (not click-through) so the answer registers; the
+    card auto-dismisses if ignored so it never nags."""
+    W = 252
+
+    def __init__(self, on_answer):
+        super().__init__()
+        self.on_answer = on_answer            # callback(question, choice_idx)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                            | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.q = None
+        self._btns = []
+        self._qlines = []
+        self.font = QFont("Segoe UI Semibold", 9)
+        self._timeout = QTimer(self)
+        self._timeout.setSingleShot(True)
+        self._timeout.timeout.connect(self.dismiss)
+
+    def _clear(self):
+        for b in self._btns:
+            b.deleteLater()
+        self._btns = []
+
+    def ask(self, q, cx, bottom_y):
+        self._clear()
+        self.q = q
+        fm = QFontMetrics(self.font)
+        words, lines, cur = q["text"].split(), [], ""
+        for w in words:                       # wrap the question to the card width
+            t = (cur + " " + w).strip()
+            if fm.horizontalAdvance(t) > self.W - 24 and cur:
+                lines.append(cur); cur = w
+            else:
+                cur = t
+        if cur:
+            lines.append(cur)
+        self._qlines = lines
+        pad = 10
+        y = pad + fm.height() * len(lines) + 8
+        bh = 26
+        for i, opt in enumerate(q["options"][:3]):
+            b = QPushButton(opt["label"], self)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setStyleSheet(
+                "QPushButton{background:#3a3f4b;color:#eaeaf0;border:1px solid #565b69;"
+                "border-radius:8px;padding:4px;font:9pt 'Segoe UI';}"
+                "QPushButton:hover{background:#4b5160;border-color:#6b7280;}")
+            b.setGeometry(pad, y, self.W - 2 * pad, bh)
+            b.clicked.connect(lambda _, k=i: self._answer(k))
+            self._btns.append(b)
+            y += bh + 6
+        h = y + pad - 6
+        self.setGeometry(int(cx - self.W / 2), int(bottom_y - h), self.W, h)
+        self.update()
+        self.show()
+        self.raise_()
+        self._timeout.start(30000)            # auto-dismiss after 30s
+
+    def _answer(self, idx):
+        cb, q = self.on_answer, self.q
+        self.dismiss()
+        if cb and q:
+            cb(q, idx)
+
+    def dismiss(self):
+        self._timeout.stop()
+        self.hide()
+        self._clear()
+        self.q = None
+
+    def paintEvent(self, _):
+        if not self.q:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+        path = QPainterPath()
+        path.addRoundedRect(0.0, 0.0, float(w - 1), float(h - 1), 12.0, 12.0)
+        p.setPen(QPen(QColor(70, 74, 88), 1))
+        p.setBrush(QColor(26, 28, 36, 246))
+        p.drawPath(path)
+        p.setFont(self.font)
+        p.setPen(QColor(244, 230, 153))
+        fm = QFontMetrics(self.font)
+        y = 10 + fm.ascent()
+        for ln in self._qlines:
+            p.drawText(12, int(y), ln)
+            y += fm.height()
+        p.end()
+
+
 class InfoPanel(QWidget):
     """Polished hover card: name + status, bond, and labelled drive meters."""
     BARS = [("energy", "Energy", QColor(80, 205, 130)),
@@ -279,6 +375,8 @@ class Mascot(QWidget):
         self.brain.load_drives(self.cat.get_drives())   # survive restarts
         self.bubble = SpeechBubble()
         self.info = InfoPanel()
+        self.qbubble = QuestionBubble(self._on_quiz_answer)   # interactive quiz (C)
+        self.next_quiz_check = time.time() + 60               # first check after 1 min
         self.hovering = False
         self.mode = "brain"                     # "brain" | "react"
         self.src_key = None                     # id of current frame list (reset detector)
@@ -334,6 +432,44 @@ class Mascot(QWidget):
         cx = self.x + DISP / 2
         self.bubble.show_text(text, cx, self.y() + 24)
 
+    def _tick_quiz(self, now):
+        """When calm and idle, occasionally ask a get-to-know-you question, then
+        surface any the worker has built. She sits still while it's on screen so
+        the answer buttons stay put under the cursor (C)."""
+        if now >= self.next_quiz_check:
+            self.next_quiz_check = now + 30
+            self.cat.maybe_ask()                  # gated internally (cooldown/bond)
+        if self.qbubble.q is not None:            # a question is on screen
+            self.brain._set("sit")                # keep her parked beside the card
+            return
+        q = self.cat.poll_question()
+        if q:
+            self.brain._set("sit")
+            cx = self.x + DISP / 2
+            self.qbubble.ask(q, cx, self.y() - 4)
+
+    def _on_quiz_answer(self, q, idx):
+        line = self.cat.answer_question(q, idx)
+        if line:
+            self._show_line(line)
+            self.last_say = 0
+
+    def _notice_cursor(self):
+        """If the mouse comes near her on the taskbar, she turns to look and
+        perks up (curious) — a light, no-UI way to feel the human's presence."""
+        if self.qbubble.q is not None:
+            return
+        try:
+            p = QCursor.pos()
+        except Exception:
+            return
+        cat_cx = self.x + DISP / 2
+        if abs(p.x() - cat_cx) < 160 and abs(p.y() - (self.y() + DISP)) < 160:
+            self.facing = "left" if p.x() < cat_cx else "right"
+            if (self.brain.behavior not in ("watch", "curious", "seek", "cower")
+                    and random.random() < 0.05):   # an occasional glance, not a stare
+                self.brain._set("watch")
+
     def mousePressEvent(self, e):
         if e.button() == Qt.RightButton:
             self._context_menu(e.globalPos())
@@ -368,6 +504,7 @@ class Mascot(QWidget):
             self.brain.force_sleep(); self.cat.say("sleep"); self.last_say = 0
         elif act == a_quit:
             STOP_FILE.write_text("stop")     # tell the watcher not to relaunch
+            self.qbubble.dismiss()
             self.persist()
             QApplication.instance().quit()
 
@@ -465,7 +602,7 @@ class Mascot(QWidget):
             self._mask_key = id(cur)
             self._apply_mask(cur)
 
-        if self.speed:
+        if self.speed and self.qbubble.q is None:     # don't wander off the quiz card
             self.x += self.dir * self.speed
             self.facing = "left" if self.dir < 0 else "right"
             if self.x <= self.left_bound:
@@ -479,9 +616,12 @@ class Mascot(QWidget):
             u = self.brain.urgent_drive()
             if u is None:
                 self.prev_drive = None
-                if now >= self.next_musing:       # idle self-talk
-                    self.next_musing = now + random.uniform(45, 120)
+                if now >= self.next_musing:       # idle self-talk (cadence adapts
+                    qf = self.cat.quiet_factor()  # to her learned chattiness)
+                    self.next_musing = now + random.uniform(45, 120) * qf
                     self._emote("musing", 0, self._ctx())
+                self._notice_cursor()            # perk up when the mouse is near (B)
+                self._tick_quiz(now)              # occasionally ask a question (C)
             elif u != self.prev_drive:            # announce a new urgent need
                 self.prev_drive = u
                 ev = {"fear": "scared", "hunger": "hungry",

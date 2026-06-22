@@ -35,6 +35,11 @@ BEHAVIORS = {
     "think":   dict(frames=["thinking", "curious"],       period=500,  speed=0, dur=(2, 4),    energy=-0.2, base=1),
     "groom":   dict(frames=["love"],                      period=1000, speed=0, dur=(2, 3),    energy=+0.3, base=1),
     "grumpy":  dict(frames=["grumpy"],                    period=1000, speed=0, dur=(1.5, 3),  energy=-0.2, base=1),
+    # extra idle flavour (Claude not running) — all reuse existing sprites
+    "loaf":    dict(frames=["sitting"],                   period=1000, speed=0, dur=(6, 14),   energy=+1.5, base=2),
+    "knead":   dict(frames=["love"],                      period=700,  speed=0, dur=(2, 4),    energy=+0.2, base=1),
+    "ponder":  dict(frames=["thinking", "curious", "alert"], period=520, speed=0, dur=(2, 4),  energy=-0.2, base=1),
+    "watch":   dict(frames=["alert", "curious"],          period=600,  speed=0, dur=(2, 4),    energy=-0.1, base=2),
     # drive-triggered behaviours
     "beg":     dict(frames=["hungry"],                    period=1000, speed=0, dur=(2, 4),    energy=-0.3, base=0),
     "seek":    dict(frames=["alert", "curious"],          period=420,  speed=2, dur=(2, 4),    energy=-0.6, base=0),
