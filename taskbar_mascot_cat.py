@@ -427,6 +427,14 @@ class Mascot(QWidget):
         self._perm_count = 0
         self._last_activity_t = time.time()
         self._next_neglect_check = time.time() + 120
+        # telemetry producers (Phase 6): emit behaviour/mood/urgent transitions +
+        # a throttled heartbeat through cat.log_event so the monitor has the signal
+        # the bond/fear/net events don't carry. Last-seen trackers below.
+        self._t_behavior = None
+        self._t_mood = None
+        self._t_urgent = "__init__"
+        self._t_hb_at = 0.0
+        self._t_hb_sig = None
         self.cs = None                # current Claude state this tick
         self.prev_cs = None
         self.last_say = 0.0
@@ -818,6 +826,9 @@ class Mascot(QWidget):
                                   min(100, int(self.cat.affection())),  # bar caps at 100%
                                   self.x + DISP / 2, self.y() - 4)
 
+        # telemetry: behaviour/mood/urgent transitions + throttled heartbeat (P6)
+        self._emit_telemetry(now)
+
         # persist drives periodically so they survive the next restart
         if now >= self.next_save:
             self.next_save = now + 30
@@ -842,6 +853,40 @@ class Mascot(QWidget):
             self.setMask(region)
         except Exception:
             self.clearMask()
+
+    def _emit_telemetry(self, now):
+        """Phase 6: feed behaviour/mood/urgent transitions + a ~3-min log-on-change
+        heartbeat to the cat's telemetry sink (cat.log_event -> cat_telemetry.jsonl).
+        The bond/fear/net producers already cover interactions; this adds the
+        behaviour/drive baseline. Cheap, fully guarded, never disturbs the loop."""
+        try:
+            b = self.brain.behavior
+            if b != self._t_behavior:
+                self.cat.log_event("behavior", name=b, prev=self._t_behavior,
+                                   mode=self.mode)
+                self._t_behavior = b
+            m = self.brain.mood
+            if m != self._t_mood:
+                self.cat.log_event("mood", mood=m, prev=self._t_mood)
+                self._t_mood = m
+            u = self.brain.urgent_drive()
+            if u != self._t_urgent:
+                self.cat.log_event("urgent", drive=u, on=u is not None)
+                self._t_urgent = u
+            if now - self._t_hb_at >= 180:        # heartbeat: ~3 min, only on change
+                sig = (round(self.brain.energy / 5), round(self.brain.hunger / 5),
+                       round(self.brain.social / 5), round(self.brain.fear / 5), m)
+                if sig != self._t_hb_sig:
+                    self.cat.log_event(
+                        "hb", energy=round(self.brain.energy, 1),
+                        hunger=round(self.brain.hunger, 1),
+                        social=round(self.brain.social, 1),
+                        fear=round(self.brain.fear, 1), mood=m, behavior=b,
+                        affection=round(self.cat.affection(), 1))
+                    self._t_hb_sig = sig
+                self._t_hb_at = now
+        except Exception:
+            pass
 
     def persist(self):
         """Save personality + current drives (called periodically and on quit).

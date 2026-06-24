@@ -157,6 +157,9 @@ KNOW = HERE / "cat_brain.json"      # offline learned knowledge (grows over time
 METRICS = HERE / "cat_metrics.json"  # telemetry (fast-churn, gitignored)
 QLIB = HERE / "questions_library.json"      # large tagged question bank (tracked)
 QLEARNED = HERE / "learned_questions.json"  # API questions kept for offline reuse
+TELEMETRY = HERE / "cat_telemetry.jsonl"    # Phase 6 behaviour log (gitignored)
+TELEMETRY_MAX_BYTES = 2_000_000             # rotate the active log past ~2 MB
+TELEMETRY_KEEP = 14                         # rotated daily-ish files to retain
 
 SCHEMA_VERSION = 4          # v4: last_attention (bond decay) + structured quiz prefs
 RECALL_MODE = "structured"  # "structured" (default) | "vector" (legacy fallback)
@@ -332,6 +335,7 @@ class Cat:
         # telemetry event sink (Phase 0): bounded in-memory ring for now; the
         # Phase-6 monitor will swap the body of log_event() for a JSONL append.
         self._events = deque(maxlen=256)
+        self._tlog_lock = threading.Lock()   # guards the JSONL append (Phase 6)
         self._metrics = {"served": 0, "local_hits": 0, "api": 0,
                          "reflection": 0, "sim_sum": 0.0, "reward_sum": 0.0,
                          "repeats": 0, "q_local": 0, "q_api": 0, "offline_flips": 0}
@@ -421,15 +425,48 @@ class Cat:
 
     # --- telemetry event sink (Phase 0) --------------------------------
     def log_event(self, kind, **fields):
-        """Record one telemetry event. For now this is a cheap, bounded in-memory
-        ring (writes nothing to disk); the Phase-6 monitor replaces the body with
-        a rotating JSONL append. Must never raise into a caller — it's wired into
-        hot paths (bond/fear/net). See docs/MONITORING.md for the field contract."""
+        """Record one telemetry event: append to a bounded in-memory ring AND to a
+        rotating JSONL on disk so the corpus survives restarts (Phase 6). Must never
+        raise into a caller — it's wired into hot paths (bond/fear/net/behaviour).
+        Events are infrequent (transitions, not per-tick), so a plain append under a
+        short lock is cheap. See docs/MONITORING.md for the field contract."""
         try:
             rec = {"ts": int(time.time()), "kind": kind}
             rec.update(fields)
             self._events.append(rec)
+            line = json.dumps(rec, ensure_ascii=False)
         except Exception:
+            return
+        try:
+            with self._tlog_lock:
+                try:
+                    if TELEMETRY.exists() and TELEMETRY.stat().st_size > TELEMETRY_MAX_BYTES:
+                        self._rotate_telemetry()
+                except OSError:
+                    pass
+                with open(TELEMETRY, "a", encoding="utf-8") as f:
+                    f.write(line + "\n")
+        except Exception:
+            pass
+
+    def _rotate_telemetry(self):
+        """Rename the active log aside and prune old rotations. Caller holds
+        _tlog_lock. Best-effort; never raises. Rotated files are
+        cat_telemetry.<stamp>.jsonl (the glob deliberately skips the active file,
+        which has no <stamp> segment)."""
+        try:
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            TELEMETRY.replace(TELEMETRY.with_name(f"cat_telemetry.{stamp}.jsonl"))
+        except OSError:
+            return
+        try:
+            rotated = sorted(HERE.glob("cat_telemetry.*.jsonl"))
+            for old in rotated[:-TELEMETRY_KEEP]:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        except OSError:
             pass
 
     # --- bond decay on neglect (Phase 1b) ------------------------------

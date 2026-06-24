@@ -21,7 +21,7 @@ cat_state.json
 cat_brain.json
 cat_metrics.json
 learned_questions.json    # API-grown quiz questions (personal, grows at runtime)
-cat_telemetry.jsonl       # Phase 6 behaviour log (personal usage)
+cat_telemetry*.jsonl      # Phase 6 behaviour log + rotations (personal usage)
 dashboard.html
 .env
 .env.local
