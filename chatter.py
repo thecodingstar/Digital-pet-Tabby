@@ -161,7 +161,7 @@ TELEMETRY = HERE / "cat_telemetry.jsonl"    # Phase 6 behaviour log (gitignored)
 TELEMETRY_MAX_BYTES = 2_000_000             # rotate the active log past ~2 MB
 TELEMETRY_KEEP = 14                         # rotated daily-ish files to retain
 
-SCHEMA_VERSION = 4          # v4: last_attention (bond decay) + structured quiz prefs
+SCHEMA_VERSION = 5          # v5: tiredness drive + knowledge_bond (quiz-based)
 RECALL_MODE = "structured"  # "structured" (default) | "vector" (legacy fallback)
 
 # --- network health (Phase 1): stop hammering a dead endpoint -----------------
@@ -174,8 +174,7 @@ NET_PROBE_COOLDOWN = 120    # seconds offline before a single re-probe is allowe
 # cat cools and gets wary but never forgets you.
 BOND_GRACE_H = 10.0         # hours of no attention before decay starts
 BOND_DECAY_PER_DAY = 4.0    # affection lost per neglected day past the grace window
-BOND_FLOOR = 25             # never decays below this (>= QUIZ_MIN_AFFECTION so
-                            # neglect can't silently disable the get-to-know quiz)
+BOND_FLOOR = 25             # affection never decays below this floor
 BOND_LOYALTY_DAMP = 0.30    # higher tiers cool slower: rate * (1 - DAMP * tier_frac)
 
 DAILY_BUDGET = 600       # max API calls/day (Groq free tier is 1000)
@@ -221,9 +220,9 @@ DEFAULT_STATE = {
 }
 
 # --- get-to-know-you quiz (C): she asks, you click, she adapts ---------------
-QUIZ_MIN_AFFECTION = 25      # only ask once she's comfortable with you
 QUIZ_COOLDOWN = 3 * 3600     # seconds between questions (don't nag)
-QUIZ_MAX = 40                # lifetime cap on stored profile answers
+QUIZ_MAX = 211               # store answers up to the full library size
+QUIZ_LIBRARY_SIZE = 211      # total questions in questions_library.json
 TRAIT_NUDGE = 0.08           # how far one answer shifts a personality trait
 # Structured preference dimensions a tagged answer can teach (Phase 3). The first
 # four are the legacy keyword-extracted set; the rest are new and library-only.
@@ -876,6 +875,13 @@ class Cat:
         with self._lock:
             return self.state.get("affection", 0)
 
+    def knowledge_bond(self):
+        """Bond 0–100 based on how many questions the cat has asked the user.
+        Grows as she learns more: 21 questions ≈ 10%, 106 ≈ 50%, 211 = 100%."""
+        with self._lock:
+            asked = len(self.state.get("quiz", {}).get("asked", []))
+        return min(100, round(asked / QUIZ_LIBRARY_SIZE * 100))
+
     def idle_hours(self):
         """Hours since the last genuine attention event (pet/feed/console/quiz).
         Drives bond decay and the Phase-4 neglect trigger. 0 if never recorded."""
@@ -913,8 +919,6 @@ class Cat:
         Non-blocking; retrieve the result with poll_question()."""
         with self._lock:
             if self._q_ready or self._q_pending:
-                return
-            if self.state.get("affection", 0) < QUIZ_MIN_AFFECTION:
                 return
             if len(self.state.get("user_profile", {})) >= QUIZ_MAX:
                 return

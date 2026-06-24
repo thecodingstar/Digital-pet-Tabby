@@ -269,14 +269,15 @@ class QuestionBubble(QWidget):
 
 class InfoPanel(QWidget):
     """Polished hover card: name + status, bond, and labelled drive meters."""
-    BARS = [("energy", "Energy", QColor(80, 205, 130)),
-            ("hunger", "Hunger", QColor(235, 170, 60)),
-            ("social", "Social", QColor(95, 165, 235)),
-            ("fear",   "Fear",   QColor(225, 95, 95))]
+    BARS = [("energy",    "Energy",    QColor(80, 205, 130)),
+            ("tiredness", "Tiredness", QColor(215, 140, 60)),
+            ("hunger",    "Hunger",    QColor(235, 200, 60)),
+            ("social",    "Social",    QColor(95, 165, 235)),
+            ("fear",      "Fear",      QColor(225, 95, 95))]
     MOOD_COLOR = {"content": QColor(120, 210, 150), "playful": QColor(95, 215, 205),
                   "sleepy": QColor(140, 160, 200), "hungry": QColor(235, 175, 70),
                   "lonely": QColor(110, 160, 235), "scared": QColor(230, 95, 95)}
-    W, H = 224, 168
+    W, H = 224, 189
 
     def __init__(self):
         super().__init__()
@@ -823,7 +824,7 @@ class Mascot(QWidget):
             else:
                 doing = DOING.get(self.brain.behavior, self.brain.behavior)
             self.info.update_info(doing, self.brain.drives(),
-                                  min(100, int(self.cat.affection())),  # bar caps at 100%
+                                  self.cat.knowledge_bond(),
                                   self.x + DISP / 2, self.y() - 4)
 
         # telemetry: behaviour/mood/urgent transitions + throttled heartbeat (P6)

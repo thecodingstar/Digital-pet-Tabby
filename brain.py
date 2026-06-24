@@ -60,7 +60,15 @@ BEHAVIORS = {
 
 # per-second drift of each drive while no interaction happens
 DRIFT = {"hunger": 0.12, "social": 0.08, "fear": -0.6}
-URGENT = {"fear": 60, "hunger": 78, "social": 72}   # thresholds that take over
+URGENT = {"fear": 60, "hunger": 78, "social": 72, "tiredness": 78}  # thresholds that take over
+
+# tiredness per-second rate by behaviour: positive = accumulating, negative = recovering
+TIREDNESS_RATE = {
+    "zoomies": +0.15, "play": +0.08, "wander": +0.04,
+    "seek": +0.05, "curious": +0.02, "watch": +0.01,
+    "sleep": -3.0, "curl": -3.0,
+    "loaf": -0.5, "sit": -0.3, "yawn": -0.2, "idle": -0.1,
+}
 
 AFFINITY_BOUNDS = (0.2, 1.0)   # behaviour-affinity clamp (B2)
 AFFINITY_ALPHA = 0.20          # affinity EWMA rate (B2)
@@ -100,6 +108,7 @@ class Brain:
         self.hunger = 20.0
         self.social = 20.0
         self.fear = 0.0
+        self.tiredness = 30.0
         self.valence = 60.0        # smoothed pleasant<->unpleasant (B1)
         self.arousal = 50.0        # smoothed calm<->excited (B1)
         self.affinity = {}         # behaviour -> learned affinity 0..1 (B2)
@@ -135,22 +144,27 @@ class Brain:
     def mood(self):
         # urgent drives name the mood directly; otherwise use the smoothed
         # valence/arousal so labels don't flicker on a threshold (B1).
-        if self.fear > 50:   return "scared"
-        if self.hunger > 75: return "hungry"
-        if self.social > 70: return "lonely"
-        if self.arousal < 35: return "sleepy"
+        if self.fear > 50:        return "scared"
+        if self.hunger > 75:      return "hungry"
+        if self.social > 70:      return "lonely"
+        if self.tiredness > 70:   return "sleepy"
+        if self.arousal < 35:     return "sleepy"
         if self.valence > 60 and self.arousal > 55: return "playful"
         return "content"
 
     def drives(self):
         return {"energy": self.energy, "hunger": self.hunger,
-                "social": self.social, "fear": self.fear, "mood": self.mood}
+                "social": self.social, "fear": self.fear,
+                "tiredness": self.tiredness, "mood": self.mood}
 
     def urgent_drive(self):
-        """Return the most pressing over-threshold drive, or None. While scared,
-        hunger/social urgency thresholds are raised so fear takes priority (B3)."""
+        """Return the most pressing over-threshold drive, or None. Priority:
+        fear > tiredness > hunger > social. While scared, hunger/social thresholds
+        are raised so fear takes absolute priority (B3)."""
         if self.fear >= URGENT["fear"]:
             return "fear"
+        if self.tiredness >= URGENT["tiredness"]:
+            return "tiredness"
         bump = 20 if self.fear > 40 else 0
         if self.hunger >= URGENT["hunger"] + bump:
             return "hunger"
@@ -209,6 +223,7 @@ class Brain:
         self._reinforce(self.behavior, 1.0)    # whatever she did just earned food
         self._note_active()
         self.hunger = _clamp(self.hunger - amount)
+        self.energy = _clamp(self.energy + 20.0)   # food gives energy
         self._set("happy")
         return "fed"
 
@@ -282,6 +297,7 @@ class Brain:
     def snapshot_drives(self):
         return {"energy": round(self.energy, 1), "hunger": round(self.hunger, 1),
                 "social": round(self.social, 1), "fear": round(self.fear, 1),
+                "tiredness": round(self.tiredness, 1),
                 "valence": round(self.valence, 1), "arousal": round(self.arousal, 1),
                 "trust": round(self.trust, 3), "jumpiness": round(self.jumpiness, 3),
                 "active_hours": [round(h, 2) for h in self.active_hours],
@@ -298,6 +314,7 @@ class Brain:
             self.hunger = _clamp(float(d.get("hunger", self.hunger)))
             self.social = _clamp(float(d.get("social", self.social)))
             self.fear = _clamp(float(d.get("fear", self.fear)))
+            self.tiredness = _clamp(float(d.get("tiredness", self.tiredness)))
             self.valence = _clamp(float(d.get("valence", self.valence)))
             self.arousal = _clamp(float(d.get("arousal", self.arousal)))
             self.trust = max(0.0, min(1.0, float(d.get("trust", self.trust))))
@@ -359,19 +376,25 @@ class Brain:
     # --- behaviour selection -------------------------------------------
     def _factor(self, name):
         e = self.energy
+        t = self.tiredness
         active = self._is_active_hour()
         if name in ("sleep", "curl"):
-            f = 6.0 if e < 22 else 1.2 if e < 45 else 0.04
+            f = (6.0 if (e < 22 or t > 80) else
+                 2.5 if (e < 40 or t > 65) else
+                 1.2 if (e < 50 or t > 50) else 0.04)
             return f * (1.0 if active else 1.6)        # nap more in quiet hours (B5)
         if name == "yawn":
-            return 1.6 if (e < 40 or self.arousal < 40) else 0.3   # yawns when sleepy
+            return 2.5 if (self.arousal < 40 or t > 50) else 1.0 if t > 35 else 0.3
         if name == "sit":
             return 2.0 if e < 50 else 0.6
         if name in ("wander", "play"):
             f = 0.4 if e < 30 else (1.7 if e > 70 else 1.0)
+            f *= max(0.2, 1 - t / 120)                 # tiredness suppresses wandering
             return f * (1.2 if active else 0.8)        # livelier when user's around
         if name == "zoomies":
-            return (0.0 if e < 60 else 1.6) * (1.2 if active else 0.7)
+            return ((0.0 if e < 60 else 1.6)
+                    * (1.2 if active else 0.7)
+                    * max(0.1, 1 - t / 90))            # zoomies suppressed when tired
         if name == "grumpy":
             return 1.4 if (e < 35 or self.hunger > 55) else 0.25
         if name == "stretch":
@@ -390,7 +413,8 @@ class Brain:
     def _choose(self):
         # urgent drives override free choice
         u = self.urgent_drive()
-        if u == "fear":   return "cower"
+        if u == "fear":      return "cower"
+        if u == "tiredness": return "sleep" if self.behavior == "yawn" else "yawn"
         # don't lock on a single urgent sprite: slip a brief *idle* between repeats
         # so sustained hunger/loneliness reads as "asks, waits, asks again" rather
         # than a frozen beg/seek loop (P1). Telemetry 2026-06-24 showed using `sit`
@@ -459,6 +483,15 @@ class Brain:
         if self.behavior in ("zoomies", "play"):
             self.hunger = _clamp(self.hunger + 0.2 * dt)
         self.jumpiness = max(0.0, self.jumpiness - 0.03 * dt)
+        # hunger saps energy when severe (drive interdependency)
+        if self.hunger > 85:
+            self.energy = _clamp(self.energy - 1.5 * dt)
+        elif self.hunger > 70:
+            self.energy = _clamp(self.energy - 0.8 * dt)
+        elif self.hunger > 50:
+            self.energy = _clamp(self.energy - 0.3 * dt)
+        # tiredness: accumulates during activity, recovers during rest
+        self.tiredness = _clamp(self.tiredness + TIREDNESS_RATE.get(self.behavior, 0.0) * dt)
         self._elapsed += dt
 
         # a sudden fear spike interrupts whatever we were doing (but not an
@@ -473,8 +506,12 @@ class Brain:
         if self.behavior in ("groom", "sleep", "curl", "stretch"):
             self.valence = _clamp(self.valence + 5)
         # scripted wake-up: nap -> yawn -> stretch -> sit
+        # only wake if both energy and tiredness are sufficiently recovered
         if self.behavior in ("sleep", "curl"):
-            self._set("yawn")
+            if self.energy > 60 and self.tiredness < 22:
+                self._set("yawn")
+            else:
+                self._elapsed = 0.0    # extend sleep until recovered
         elif self.behavior == "yawn":
             self._set("stretch")
         elif self.behavior == "stretch":
