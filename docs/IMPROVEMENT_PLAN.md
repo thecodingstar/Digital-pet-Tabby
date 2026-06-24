@@ -34,4 +34,7 @@ Each entry: a date, the signal that prompted it, and a proposed change.
   `sit`; (b) down-weight `sit` in `_choose` since it's also the catch-all
   fallback. Either should drop `sit` below the 25% flag and de-couple it from
   `beg`. Re-measure with a fresh roll-up after the change.
-- **Status:** proposed.
+- **Status:** done (2026-06-24) — `_choose` now uses `idle` (not `sit`) for the
+  hunger/social reprieve. Left the `sit` fallback weight unchanged: telemetry
+  showed sit was only <25% until begging coupled it, so the reprieve was the
+  cause. Re-measure on the next multi-hour run.

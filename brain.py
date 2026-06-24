@@ -391,11 +391,13 @@ class Brain:
         # urgent drives override free choice
         u = self.urgent_drive()
         if u == "fear":   return "cower"
-        # don't lock on a single urgent sprite: slip a brief sit between repeats so
-        # sustained hunger/loneliness reads as "asks, waits, asks again" rather than
-        # a frozen beg/seek loop (P1).
-        if u == "hunger": return "sit" if self.behavior == "beg" else "beg"
-        if u == "social": return "sit" if self.behavior == "seek" else "seek"
+        # don't lock on a single urgent sprite: slip a brief *idle* between repeats
+        # so sustained hunger/loneliness reads as "asks, waits, asks again" rather
+        # than a frozen beg/seek loop (P1). Telemetry 2026-06-24 showed using `sit`
+        # as the pause inflated sit to ~29% and coupled it to beg; `idle` (2.5-5s)
+        # is a shorter, neutral pause that keeps the begging cadence tight.
+        if u == "hunger": return "idle" if self.behavior == "beg" else "beg"
+        if u == "social": return "idle" if self.behavior == "seek" else "seek"
         # genuinely down (post-fright / long-ignored / starving) -> look sad
         if self.valence < 30 and random.random() < 0.6:
             return "sad"
