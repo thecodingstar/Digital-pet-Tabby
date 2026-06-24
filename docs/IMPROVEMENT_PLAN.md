@@ -34,7 +34,8 @@ Each entry: a date, the signal that prompted it, and a proposed change.
   `sit`; (b) down-weight `sit` in `_choose` since it's also the catch-all
   fallback. Either should drop `sit` below the 25% flag and de-couple it from
   `beg`. Re-measure with a fresh roll-up after the change.
-- **Status:** done (2026-06-24) — `_choose` now uses `idle` (not `sit`) for the
-  hunger/social reprieve. Left the `sit` fallback weight unchanged: telemetry
-  showed sit was only <25% until begging coupled it, so the reprieve was the
-  cause. Re-measure on the next multi-hour run.
+- **Status:** done (2026-06-24) — both parts applied: (a) `_choose` uses `idle`
+  (not `sit`) for the hunger/social reprieve; (b) `sit` base weight lowered 4->3
+  (to match `idle`) so it's no longer the single most-weighted idle pose, while
+  staying a natural resting behaviour. Re-measure on the next multi-hour run to
+  confirm `sit` drops below the 25% flag.

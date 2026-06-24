@@ -24,7 +24,7 @@ R = [f"run-{i}" for i in range(1, 7)]
 # base 0 => never chosen at random; only triggered by a drive override.
 BEHAVIORS = {
     "idle":    dict(frames=["idle"] * 8 + ["idle_blink"], period=220,  speed=0, dur=(2.5, 5),  energy=+0.4, base=3),
-    "sit":     dict(frames=["sitting"],                   period=1000, speed=0, dur=(4, 9),    energy=+2.0, base=4),
+    "sit":     dict(frames=["sitting"],                   period=1000, speed=0, dur=(4, 9),    energy=+2.0, base=3),
     "sleep":   dict(frames=["sleeping"],                  period=1000, speed=0, dur=(12, 28),  energy=+7.0, base=3),
     "stretch": dict(frames=["stretch"],                   period=900,  speed=0, dur=(1.5, 2.6), energy=-0.5, base=1),
     "wander":  dict(frames=W,                             period=120,  speed=3, dur=(4, 9),    energy=-2.5, base=4),
