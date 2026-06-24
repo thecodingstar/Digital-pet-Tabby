@@ -19,4 +19,19 @@ Each entry: a date, the signal that prompted it, and a proposed change.
 
 ## Entries
 
-_(none yet — the monitoring loop has not run. Seeded by the Ultraplan v2 work.)_
+### 2026-06-24 — `sit` over-use, amplified by the beg-reprieve
+- **Signal:** first live roll-up (`analyze_telemetry.py`, ~14 min, 205 events):
+  `sit` 29% of behaviour transitions (over the 25% flag) and `beg` 20% — together
+  half of all transitions. `sit` and `beg` counts rose in lockstep as hunger
+  climbed (sit 12->26->52, beg 0->10->37), because the Phase-1b hunger reprieve
+  returns `sit` as the pause between begs. So a hunger episode makes every other
+  behaviour `sit`. Drives healthy (energy 49->82, hunger 19->50 unfed, social
+  7->31); persisted mood varied (sleepy/content/hungry); the new `permission`
+  fear trigger fired once (works live); no bond/net events (expected: no pets,
+  10h decay grace, API online).
+- **Proposal:** (a) use a dedicated short pause sprite (`loaf`/`idle`) instead of
+  `sit` for the urgent reprieve in `brain._choose`, so begging doesn't inflate
+  `sit`; (b) down-weight `sit` in `_choose` since it's also the catch-all
+  fallback. Either should drop `sit` below the 25% flag and de-couple it from
+  `beg`. Re-measure with a fresh roll-up after the change.
+- **Status:** proposed.
