@@ -144,6 +144,104 @@ def rhythm_checks():
     return checks
 
 
+def feature_checks():
+    """Ultraplan v2 assertions: bond decay (1b), offline question flow (1+3),
+    and fear dynamics (4). Throwaway temp files, no network, instant."""
+    import time
+    import tempfile
+    from brain import Brain
+    checks = []
+
+    def chk(name, ok):
+        checks.append((name, bool(ok)))
+
+    def fresh_cat():
+        tmp = Path(tempfile.mkdtemp())
+        chatter.STATE = tmp / "s.json"
+        chatter.KNOW = tmp / "k.json"
+        chatter.METRICS = tmp / "m.json"
+        chatter.CONFIG = tmp / "nope.json"
+        chatter.QLEARNED = tmp / "learned.json"
+        chatter.DAILY_BUDGET = 10 ** 9
+        return chatter.Cat()
+
+    now = time.time()
+    # --- bond decay (1b) ---
+    c = fresh_cat()
+    c.state["affection"] = 120
+    c.state["last_attention"] = now
+    c._decay_bond(persist=False)
+    chk("bond stable within grace window", c.state["affection"] == 120)
+    c.state["affection"] = 120
+    c.state["last_attention"] = now - 7 * 86400
+    c._decay_bond(persist=False)
+    chk("bond decays past grace", c.state["affection"] < 120)
+    chk("bond decay respects floor", c.state["affection"] >= chatter.BOND_FLOOR)
+    c.state["affection"] = 200
+    c.state["last_attention"] = now - 10 * 86400
+    c._decay_bond(persist=False)
+    hi_lost = 200 - c.state["affection"]
+    c.state["affection"] = 80
+    c.state["last_attention"] = now - 10 * 86400
+    c._decay_bond(persist=False)
+    lo_lost = 80 - c.state["affection"]
+    chk("higher tier cools slower (loyalty damping)", hi_lost < lo_lost)
+    c.state["affection"] = 30
+    c.state["last_attention"] = now - 365 * 86400
+    c._decay_bond(persist=False)
+    chk("floor holds over extreme neglect", c.state["affection"] >= chatter.BOND_FLOOR)
+    c.state["affection"] = 100
+    c.state["last_attention"] = now - 5 * 86400
+    c.pet()
+    chk("a pet resets the neglect clock", time.time() - c.state["last_attention"] < 5)
+
+    # --- offline question flow (1 + 3) ---
+    c2 = fresh_cat()
+    c2.cfg = {"base_url": "http://localhost:9/v1", "api_key": "x", "model": "x"}
+    c2.online = False
+    c2._net_probe_at = now + 1e9            # force offline, no re-probe
+    base_traits = dict(c2.state["traits"])
+    seen = set()
+    for _ in range(30):
+        c2._build_question()
+        q = c2.poll_question()
+        if not q:
+            continue
+        seen.add(q["id"])
+        c2.answer_question(q, 0)
+    chk("offline questions flow from the library", len(seen) >= 20)
+    chk("no question repeats until bank exhausted", len(seen) >= 28)
+    chk("no API question while offline", c2._metrics["q_api"] == 0 and c2._metrics["q_local"] > 0)
+    learned = {k: v for k, v in c2.behavior_hints()["prefs"].items() if v is not None}
+    chk("offline answers teach prefs (>=3 dims)", len(learned) >= 3)
+    chk("offline answers move traits", dict(c2.state["traits"]) != base_traits)
+
+    # --- fear dynamics (4) ---
+    b = Brain()
+    b.apply_hints({"traits": {"shyness": 0.5}})
+    b.trust = 0.0
+    b.fear = 0.0
+    b.scare(45, trigger="tool_failure")
+    f1 = b.fear
+    chk("scare records its trigger", b.last_fear_trigger == "tool_failure")
+    for _ in range(3):
+        b.scare(60, trigger="error_storm")
+    chk("error storm raises fear above a single scare", b.fear > f1)
+    for _ in range(400):                    # ~200s of decay at DRIFT fear -0.6/s
+        b.tick(0.5)
+    chk("fear recovers after the storm passes", b.fear < 20)
+    lo = Brain()
+    lo.apply_hints({"traits": {"shyness": 0.5}})
+    lo.trust, lo.fear = 0.0, 0.0
+    lo.scare(45, trigger="x")
+    hi = Brain()
+    hi.apply_hints({"traits": {"shyness": 0.5}})
+    hi.trust, hi.fear = 1.0, 0.0
+    hi.scare(45, trigger="x")
+    chk("trust blunts the same scare", hi.fear < lo.fear)
+    return checks
+
+
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     rows = [run("vector", n), run("structured", n)]
@@ -158,7 +256,14 @@ if __name__ == "__main__":
     results = rhythm_checks()
     for name, ok in results:
         print(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+
+    print("\n=== Ultraplan v2: bond decay / offline questions / fear ===")
+    feat = feature_checks()
+    for name, ok in feat:
+        print(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+
+    results += feat
     if all(ok for _, ok in results):
-        print("  all X12 checks passed")
+        print("\n  all checks passed")
     else:
-        sys.exit("  X12 CHECKS FAILED")
+        sys.exit("\n  CHECKS FAILED")

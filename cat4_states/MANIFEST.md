@@ -14,7 +14,7 @@ curious, playful, done (proud/satisfied), angry, hungry, sad, scared, surprised,
 Deduped variants from GG_2: kept the stronger pose, dropped near-dups
 (proud_a≈proud_b, curious_a≈curious_b, angry_b≈grumpy, hungry_b weaker, sad_a < sad_b).
 
-## Extra poses (6) — added from `Gemini_..._7jkbv9...png` via `cat5_slice.py`
+## Extra poses (6) — added from `Gemini_..._7jkbv9...png` via `tools/cat5_slice.py`
 hiss (teeth-bared snarl), yawn (sitting wide-mouth), defensive_arch (spicy
 arched back), loaf (real loaf — replaces the `sitting`-faked loaf behaviour),
 sleep_curled (curled nap, alt to `sleeping`), scratch (hind-leg groom).

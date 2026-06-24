@@ -1,0 +1,5126 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "chatty_work",
+      "text": "want me chatty or chill while you work?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "chatty",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          },
+          "fact": "human likes company while working"
+        },
+        {
+          "label": "chill",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          },
+          "fact": "human likes quiet focus"
+        }
+      ]
+    },
+    {
+      "id": "code_breaks",
+      "text": "when code breaks, want cheering or quiet?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "cheer me up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          },
+          "fact": "human wants cheering on errors"
+        },
+        {
+          "label": "give me space",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          },
+          "fact": "human wants space on errors"
+        }
+      ]
+    },
+    {
+      "id": "bad_day",
+      "text": "rough day -- a pep talk or some quiet?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "pep talk",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "just quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          },
+          "fact": "human decompresses alone"
+        }
+      ]
+    },
+    {
+      "id": "stress_relief",
+      "text": "stressed out -- vent it or shake it off?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "vent it",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "shake it off",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        }
+      ]
+    },
+    {
+      "id": "win_react",
+      "text": "you nailed something -- celebrate loud or smile quiet?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "celebrate loud",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "smile quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "comfort_sound",
+      "text": "comfort is more... cozy blanket or fresh air?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "cozy blanket",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          },
+          "fact": "human finds comfort in cozy"
+        },
+        {
+          "label": "fresh air",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "recharge",
+      "text": "you recharge best alone or around people?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "alone",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          },
+          "fact": "human recharges alone"
+        },
+        {
+          "label": "around people",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          },
+          "fact": "human recharges socially"
+        }
+      ]
+    },
+    {
+      "id": "hard_news",
+      "text": "tough feedback -- soft landing or straight up?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "soft landing",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          },
+          "fact": "human prefers gentle feedback"
+        },
+        {
+          "label": "straight up",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          },
+          "fact": "human prefers blunt feedback"
+        }
+      ]
+    },
+    {
+      "id": "pace_pref",
+      "text": "do you like fast sprints or slow and steady?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "fast sprints",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          },
+          "fact": "human works in fast sprints"
+        },
+        {
+          "label": "slow + steady",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          },
+          "fact": "human works slow and steady"
+        }
+      ]
+    },
+    {
+      "id": "focus_blocks",
+      "text": "deep focus blocks or quick task hops?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "deep blocks",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human prefers deep focus blocks"
+        },
+        {
+          "label": "quick hops",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          },
+          "fact": "human multitasks"
+        }
+      ]
+    },
+    {
+      "id": "plan_or_dive",
+      "text": "new task -- plan it out or just dive in?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "plan it out",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human plans before starting"
+        },
+        {
+          "label": "dive in",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          },
+          "fact": "human dives in"
+        }
+      ]
+    },
+    {
+      "id": "desk_state",
+      "text": "is your desk tidy or happily chaotic?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "tidy",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human keeps a tidy desk"
+        },
+        {
+          "label": "happily chaotic",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "deadline_style",
+      "text": "deadlines -- early and easy or last-minute thrill?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "early and easy",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow",
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "last-minute thrill",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human likes deadline pressure"
+        }
+      ]
+    },
+    {
+      "id": "review_style",
+      "text": "want me to flag every nit or only the big stuff?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "every nit",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "big stuff only",
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "worktime_music",
+      "text": "focus better with music or silence?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "music on",
+          "traits": {
+            "playfulness": 1
+          },
+          "fact": "human codes to music"
+        },
+        {
+          "label": "silence",
+          "traits": {
+            "shyness": 1
+          },
+          "fact": "human needs silence to focus"
+        }
+      ]
+    },
+    {
+      "id": "multitask_q",
+      "text": "one thing at a time or many plates spinning?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "one thing",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "many plates",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "break_style",
+      "text": "breaks -- short and frequent or rare and long?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "short + frequent",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "rare + long",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "progress_feel",
+      "text": "what feels better -- shipping fast or polishing?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "shipping fast",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          },
+          "fact": "human values shipping"
+        },
+        {
+          "label": "polishing",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human values polish"
+        }
+      ]
+    },
+    {
+      "id": "stuck_move",
+      "text": "stuck on a bug -- push through or step away?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "push through",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "step away",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          },
+          "fact": "human steps away when stuck"
+        }
+      ]
+    },
+    {
+      "id": "night_or_morning",
+      "text": "night owl or early bird?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "night owl",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          },
+          "fact": "human is a night owl"
+        },
+        {
+          "label": "early bird",
+          "prefs": {
+            "chronotype": "early"
+          },
+          "fact": "human is an early bird"
+        }
+      ]
+    },
+    {
+      "id": "best_hours",
+      "text": "your sharpest hours -- late night or early morning?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "late night",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        },
+        {
+          "label": "early morning",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chronotype": "early"
+          }
+        }
+      ]
+    },
+    {
+      "id": "weekend_wake",
+      "text": "weekends -- sleep in or up with the sun?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "sleep in",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        },
+        {
+          "label": "up with the sun",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "early"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nap_q",
+      "text": "are you a power-nap person or push-through person?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "power nap",
+          "traits": {
+            "shyness": 1
+          },
+          "fact": "human likes naps"
+        },
+        {
+          "label": "push through",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "evening_wind",
+      "text": "evenings -- wind down early or keep going late?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "wind down early",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "keep going late",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "coffee_q",
+      "text": "fuel of choice -- coffee or tea?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "coffee",
+          "traits": {
+            "curiosity": 1
+          },
+          "fact": "human runs on coffee"
+        },
+        {
+          "label": "tea",
+          "traits": {
+            "shyness": 1
+          },
+          "fact": "human prefers tea"
+        }
+      ]
+    },
+    {
+      "id": "cat_or_dog",
+      "text": "more of a cat person or dog person?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "cats, obviously",
+          "traits": {
+            "sass": 1
+          },
+          "fact": "human is a cat person"
+        },
+        {
+          "label": "dogs",
+          "traits": {
+            "playfulness": 1
+          },
+          "fact": "human is a dog person"
+        }
+      ]
+    },
+    {
+      "id": "party_size",
+      "text": "ideal hangout -- big party or a few close friends?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "big party",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "few close friends",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          },
+          "fact": "human prefers small groups"
+        }
+      ]
+    },
+    {
+      "id": "weekend_plan",
+      "text": "perfect weekend -- out exploring or cozy at home?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "out exploring",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "social_energy": "social",
+            "aesthetics": "minimal"
+          }
+        },
+        {
+          "label": "cozy at home",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary",
+            "aesthetics": "cozy"
+          },
+          "fact": "human likes cozy weekends"
+        }
+      ]
+    },
+    {
+      "id": "meet_new",
+      "text": "meeting new people -- exciting or exhausting?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "exciting",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "exhausting",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "call_or_text",
+      "text": "quick question -- call or text?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "call",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "text",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          },
+          "fact": "human prefers texting"
+        }
+      ]
+    },
+    {
+      "id": "share_wins",
+      "text": "good news -- tell everyone or savor it quietly?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "tell everyone",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "savor quietly",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "group_role",
+      "text": "in a group are you the talker or the listener?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "the talker",
+          "traits": {
+            "playfulness": 1,
+            "sass": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "the listener",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          },
+          "fact": "human is a listener"
+        }
+      ]
+    },
+    {
+      "id": "humor_pref",
+      "text": "you like me sweet or a little sassy?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "sweet",
+          "traits": {
+            "sass": -1
+          },
+          "prefs": {
+            "humor": "playful"
+          },
+          "fact": "human likes sweet"
+        },
+        {
+          "label": "sassy",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "serious"
+          },
+          "fact": "human likes sass"
+        }
+      ]
+    },
+    {
+      "id": "joke_style",
+      "text": "jokes -- silly puns or dry wit?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "silly puns",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "dry wit",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "serious"
+          },
+          "fact": "human enjoys dry humor"
+        }
+      ]
+    },
+    {
+      "id": "fun_kind",
+      "text": "fun means... goofing around or a good challenge?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "goofing around",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "a good challenge",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "game_pref",
+      "text": "games -- chaotic party games or deep strategy?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "party games",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "deep strategy",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human likes strategy games"
+        }
+      ]
+    },
+    {
+      "id": "playful_break",
+      "text": "mid-day break -- a quick game or a quiet stretch?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "quick game",
+          "traits": {
+            "playfulness": 1
+          }
+        },
+        {
+          "label": "quiet stretch",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "teasing_ok",
+      "text": "is friendly teasing fun or not your thing?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "totally fun",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "not my thing",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "surprise_q",
+      "text": "surprises -- love them or rather know the plan?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "love them",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human loves surprises"
+        },
+        {
+          "label": "know the plan",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "create_or_refine",
+      "text": "you'd rather invent something new or perfect what exists?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "invent new",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human likes inventing"
+        },
+        {
+          "label": "perfect it",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human likes refining"
+        }
+      ]
+    },
+    {
+      "id": "idea_flow",
+      "text": "ideas come better brainstorming aloud or mulling solo?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "brainstorm aloud",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "mull solo",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "art_taste",
+      "text": "your style leans bold and colorful or clean and minimal?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "bold + colorful",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "clean + minimal",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "minimal"
+          },
+          "fact": "human likes minimal style"
+        }
+      ]
+    },
+    {
+      "id": "blank_page",
+      "text": "a blank page feels like... freedom or pressure?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "freedom",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "pressure",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "learn_new",
+      "text": "learning something new -- tutorial first or tinker first?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "tutorial first",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human reads docs first"
+        },
+        {
+          "label": "tinker first",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          },
+          "fact": "human learns by tinkering"
+        }
+      ]
+    },
+    {
+      "id": "music_make",
+      "text": "music while creating -- lyrics or instrumental?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "lyrics",
+          "traits": {
+            "playfulness": 1
+          }
+        },
+        {
+          "label": "instrumental",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "travel_style",
+      "text": "travel -- packed itinerary or wander and see?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "packed itinerary",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human plans trips tightly"
+        },
+        {
+          "label": "wander and see",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous",
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "home_vibe",
+      "text": "home should feel sleek and minimal or warm and cluttered?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "sleek + minimal",
+          "prefs": {
+            "aesthetics": "minimal"
+          },
+          "fact": "human likes minimal spaces"
+        },
+        {
+          "label": "warm + cluttered",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          },
+          "fact": "human likes cozy spaces"
+        }
+      ]
+    },
+    {
+      "id": "season_pref",
+      "text": "your season -- bright summer or cozy winter?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "bright summer",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "cozy winter",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "risk_money",
+      "text": "big decisions -- go with the gut or weigh it carefully?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "go with gut",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human is decisive"
+        },
+        {
+          "label": "weigh it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          },
+          "fact": "human deliberates"
+        }
+      ]
+    },
+    {
+      "id": "new_food",
+      "text": "restaurant -- try the wildcard or order your usual?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "the wildcard",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human is adventurous with food"
+        },
+        {
+          "label": "my usual",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          },
+          "fact": "human orders the usual"
+        }
+      ]
+    },
+    {
+      "id": "morning_first",
+      "text": "first thing in the morning -- move your body or ease in slow?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "move my body",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "ease in slow",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tidy_cadence",
+      "text": "tidying -- a little every day or one big blitz?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "little every day",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "big blitz",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "outdoors_q",
+      "text": "a free afternoon -- outside in nature or indoors with a project?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "outside in nature",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "indoors project",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human likes indoor projects"
+        }
+      ]
+    },
+    {
+      "id": "phone_q",
+      "text": "your phone -- inbox zero or ninety-nine notifications?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "inbox zero",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human keeps inbox clean"
+        },
+        {
+          "label": "ninety-nine",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reward_pref",
+      "text": "after a win, you'd rather hear praise or grab a treat?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "praise",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          },
+          "fact": "human is motivated by praise"
+        },
+        {
+          "label": "a treat",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          },
+          "fact": "human likes a treat reward"
+        }
+      ]
+    },
+    {
+      "id": "motivate_q",
+      "text": "what keeps you going -- a cheering voice or a treat at the end?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "cheering voice",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise",
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "treat at the end",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        }
+      ]
+    },
+    {
+      "id": "milestone_q",
+      "text": "finishing a milestone -- a victory lap or straight to the next thing?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "victory lap",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "next thing",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          },
+          "fact": "human keeps momentum"
+        }
+      ]
+    },
+    {
+      "id": "praise_q",
+      "text": "compliments -- soak them up or brush them off?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "soak them up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "brush them off",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "tabby_energy",
+      "text": "want me bouncy and playful or calm and steady?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "bouncy + playful",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "calm + steady",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tabby_naps",
+      "text": "should i nap a lot or stay alert by you?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "nap a lot",
+          "traits": {
+            "shyness": 1
+          }
+        },
+        {
+          "label": "stay alert",
+          "traits": {
+            "curiosity": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "tabby_curious",
+      "text": "want me nosy and curious or chill and unbothered?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "nosy + curious",
+          "traits": {
+            "curiosity": 1
+          }
+        },
+        {
+          "label": "chill",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "tabby_talk",
+      "text": "should i pipe up with thoughts or mostly stay quiet?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "pipe up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "stay quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tabby_sass",
+      "text": "want a little attitude from me or pure sweetness?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "little attitude",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "serious"
+          }
+        },
+        {
+          "label": "pure sweetness",
+          "traits": {
+            "sass": -1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        }
+      ]
+    },
+    {
+      "id": "focus_env",
+      "text": "best focus spot -- a busy cafe or a silent room?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "busy cafe",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "silent room",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human focuses in quiet"
+        }
+      ]
+    },
+    {
+      "id": "decide_speed",
+      "text": "choices -- decide quick or sleep on it?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "decide quick",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold",
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "sleep on it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious",
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "feedback_when",
+      "text": "want my notes as you go or all at the end?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "as i go",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "at the end",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "celebrate_who",
+      "text": "celebrate a win -- with the crew or just us?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "with the crew",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "just us",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "risk_try",
+      "text": "a risky idea -- chase it or play it safe?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "chase it",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          },
+          "fact": "human chases bold ideas"
+        },
+        {
+          "label": "play it safe",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "morning_mood",
+      "text": "mornings -- chatty and bright or slow and silent?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "chatty + bright",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty",
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "slow + silent",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "snack_q",
+      "text": "snacks -- sweet or savory?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "sweet",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          },
+          "fact": "human has a sweet tooth"
+        },
+        {
+          "label": "savory",
+          "traits": {
+            "sass": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "cook_q",
+      "text": "dinner -- cook from scratch or keep it quick?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "from scratch",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "structured",
+            "pace": "slow"
+          }
+        },
+        {
+          "label": "keep it quick",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "read_q",
+      "text": "downtime -- a long book or short videos?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "long book",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human reads books"
+        },
+        {
+          "label": "short videos",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan_day",
+      "text": "your day -- mapped to a list or go with the flow?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "mapped to a list",
+          "prefs": {
+            "structure": "structured"
+          },
+          "fact": "human is a list maker"
+        },
+        {
+          "label": "go with the flow",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "energy_social",
+      "text": "a long week -- unwind with friends or solo time?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "with friends",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "solo time",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "detail_q",
+      "text": "you notice the big picture or the tiny details first?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "big picture",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          },
+          "fact": "human is big-picture"
+        },
+        {
+          "label": "tiny details",
+          "prefs": {
+            "focus_style": "deep"
+          },
+          "fact": "human is detail-oriented"
+        }
+      ]
+    },
+    {
+      "id": "rain_q",
+      "text": "a rainy day feels cozy or a little gloomy?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "cozy",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "gloomy"
+        }
+      ]
+    },
+    {
+      "id": "change_q",
+      "text": "change in plans -- exciting or unsettling?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "exciting",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "unsettling",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious",
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "praise_give",
+      "text": "do you give compliments easily or save them for big ones?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "easily",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "for big ones",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aesthetic_color",
+      "text": "your palette -- soft pastels or bold brights?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "soft pastels",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "bold brights",
+          "traits": {
+            "playfulness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "workspace_light",
+      "text": "you focus better in bright light or dim and cozy?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "bright light",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        },
+        {
+          "label": "dim + cozy",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "goal_q",
+      "text": "goals -- one big mission or lots of small wins?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "one big mission",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "small wins",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        }
+      ]
+    },
+    {
+      "id": "talk_think",
+      "text": "thinking out loud helps or do you process quietly?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "out loud",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "quietly",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "adventure_q",
+      "text": "weekend trip -- mountains or city lights?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "mountains",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "city lights",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_tea_strong",
+      "text": "tea or coffee, but strong?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "strong coffee",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "bold tea",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_book_film",
+      "text": "a story -- read it or watch it?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "read it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "watch it",
+          "traits": {
+            "playfulness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_text_emoji",
+      "text": "texts -- words or emoji?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "words",
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "emoji",
+          "traits": {
+            "playfulness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_window_aisle",
+      "text": "on a trip -- window or aisle?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "window",
+          "traits": {
+            "curiosity": 1
+          }
+        },
+        {
+          "label": "aisle",
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_plan_surprise",
+      "text": "birthday -- planned or a surprise?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "planned",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "surprise",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_early_late",
+      "text": "alarm -- early or snooze?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "early",
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "snooze",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_save_spend",
+      "text": "extra cash -- save it or treat yourself?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "save it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        },
+        {
+          "label": "treat yourself",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_loud_quiet",
+      "text": "a cafe -- buzzing or hushed?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "buzzing",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "hushed",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_lead_follow",
+      "text": "a project -- lead it or support it?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "lead it",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "support it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_map_explore",
+      "text": "a new city -- map first or just explore?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "map first",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "just explore",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_sweet_spicy",
+      "text": "flavor -- sweet or spicy?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "sweet",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        },
+        {
+          "label": "spicy",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_call_meet",
+      "text": "catching up -- a long call or a quick meet?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "long call",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "quick meet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_detail_gist",
+      "text": "instructions -- every detail or just the gist?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "every detail",
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "just the gist",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_old_new",
+      "text": "tools -- trusty old or shiny new?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "trusty old",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        },
+        {
+          "label": "shiny new",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_quiet_music",
+      "text": "deep work -- silence or a steady beat?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "silence",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "steady beat",
+          "traits": {
+            "playfulness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_short_long",
+      "text": "a break -- five minutes or fifty?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "five minutes",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "fifty",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_in_out",
+      "text": "friday night -- go out or stay in?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "go out",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "stay in",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_hot_cold",
+      "text": "weather -- warm sun or crisp cold?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "warm sun",
+          "traits": {
+            "playfulness": 1
+          }
+        },
+        {
+          "label": "crisp cold",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_talk_text",
+      "text": "big news -- say it or write it?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "say it",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "write it",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_risk_safe",
+      "text": "gut feeling -- take the leap or hold steady?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "take the leap",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "hold steady",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_neat_messy",
+      "text": "notes -- neat outline or messy scribbles?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "neat outline",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "messy scribbles",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_solo_team",
+      "text": "a hard problem -- crack it solo or rally a team?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "solo",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "rally a team",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_early_owl2",
+      "text": "your peak -- sunrise or midnight?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "sunrise",
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "midnight",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_praise_quiet",
+      "text": "after effort -- a high five or a quiet nod?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "high five",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "quiet nod",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_cozy_sleek",
+      "text": "a room -- cozy clutter or sleek lines?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "cozy clutter",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "sleek lines",
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_fast_careful",
+      "text": "first draft -- fast and rough or slow and careful?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "fast + rough",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "slow + careful",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_share_keep",
+      "text": "a new idea -- share early or perfect first?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "share early",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "perfect first",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_routine_random",
+      "text": "your days -- same routine or mix it up?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "same routine",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "mix it up",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_big_small",
+      "text": "celebrations -- go big or keep it small?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "go big",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "keep it small",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_listen_lead",
+      "text": "a debate -- jump in or hear it out?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "jump in",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "hear it out",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_pet_quiet",
+      "text": "when you're low, want a nuzzle or a quiet sit-near?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "a nuzzle",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "sit near",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_advice_listen",
+      "text": "venting -- want advice or just an ear?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "advice",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "just an ear",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_hug_space",
+      "text": "bad news -- a hug or some room?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "a hug",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "some room",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_calm_hype",
+      "text": "before something big -- pump you up or keep you calm?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "pump me up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "keep me calm",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_remind_gentle",
+      "text": "reminders -- nudge you firmly or softly?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "firmly",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "softly",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_check_in",
+      "text": "quiet day -- should i check in or leave you be?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "check in",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "leave me be",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_food_plan",
+      "text": "meals -- planned for the week or decided in the moment?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "planned",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "in the moment",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_food_share",
+      "text": "a meal out -- share lots of plates or your own dish?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "share plates",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "my own dish",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_breakfast",
+      "text": "breakfast -- a real sit-down or grab and go?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "sit-down",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        },
+        {
+          "label": "grab and go",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_dessert",
+      "text": "dessert -- always yes or rarely?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "always yes",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        },
+        {
+          "label": "rarely",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_cook_alone",
+      "text": "cooking -- a calm solo ritual or a group thing?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "solo ritual",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "group thing",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_spice_level",
+      "text": "heat -- mild and safe or bring the fire?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "mild + safe",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        },
+        {
+          "label": "bring the fire",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_phone",
+      "text": "deep work -- phone away or close by?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "phone away",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "close by",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_tabs",
+      "text": "browser -- one tab or thirty?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "one tab",
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "thirty",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_morning",
+      "text": "hard tasks -- first thing or later in the day?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "first thing",
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "later",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_timer",
+      "text": "do you work in timed sprints or until it's done?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "timed sprints",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "until done",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_quietmusic",
+      "text": "background -- nature sounds or lo-fi beats?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "nature sounds",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "lo-fi beats",
+          "traits": {
+            "playfulness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_alone2",
+      "text": "tricky thinking -- closed door or open space?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "closed door",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "open space",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_vent",
+      "text": "frustrated -- talk it out or walk it off?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "talk it out",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "walk it off",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_music",
+      "text": "low mood -- upbeat songs or mellow ones?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "upbeat",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "mellow",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_win",
+      "text": "small win -- treat yourself or just keep rolling?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "treat myself",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        },
+        {
+          "label": "keep rolling",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_reset",
+      "text": "to reset -- a walk outside or a quiet sit?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "walk outside",
+          "traits": {
+            "curiosity": 1
+          }
+        },
+        {
+          "label": "quiet sit",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_share",
+      "text": "feelings -- wear them openly or keep them close?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "openly",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "close",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_weekend",
+      "text": "sundays -- fully lazy or a little productive?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "fully lazy",
+          "traits": {
+            "shyness": 1
+          }
+        },
+        {
+          "label": "a little productive",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_unwind",
+      "text": "to unwind -- a show or a stroll?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "a show",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "a stroll",
+          "traits": {
+            "curiosity": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_bath",
+      "text": "decompress -- a long bath or a quick reset?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "long bath",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        },
+        {
+          "label": "quick reset",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_screen",
+      "text": "before bed -- screens or a book?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "screens",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        },
+        {
+          "label": "a book",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_sleep",
+      "text": "sleep -- a strict schedule or whenever you crash?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "strict schedule",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "whenever",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_outdoor",
+      "text": "fun outside -- a sport or a wander?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "a sport",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "a wander",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_competitive",
+      "text": "games -- in it to win or just for laughs?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "in it to win",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "for laughs",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_puzzle",
+      "text": "downtime -- a puzzle or a comedy?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "a puzzle",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "a comedy",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_dance",
+      "text": "music on -- dance it out or nod along?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "dance it out",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "nod along",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_pranks",
+      "text": "april fools -- prankster or peacekeeper?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "prankster",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "peacekeeper",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_new",
+      "text": "a free hour -- try a new hobby or enjoy a favorite?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "new hobby",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "a favorite",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_messy",
+      "text": "making things -- embrace the mess or keep it tidy?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "embrace mess",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        },
+        {
+          "label": "keep tidy",
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_solo",
+      "text": "creating -- alone in the zone or bouncing with others?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "alone in the zone",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "bouncing ideas",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_finish",
+      "text": "projects -- finish one or juggle many?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "finish one",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "juggle many",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_inspire",
+      "text": "inspiration -- from people or from quiet?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "from people",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "from quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_plan2",
+      "text": "a creative project -- outline first or freestyle?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "outline first",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "freestyle",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_share2",
+      "text": "your work -- show it proudly or quietly tuck it away?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "show it proudly",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "tuck it away",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_intro",
+      "text": "new room of people -- work it or find one friend?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "work the room",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "find one friend",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_plans",
+      "text": "weekend plans -- locked in early or kept loose?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "locked in",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "kept loose",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_smalltalk",
+      "text": "small talk -- fun warm-up or a chore?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "fun warm-up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "a chore",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_host",
+      "text": "gatherings -- host them or attend them?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "host them",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "attend them",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_reach",
+      "text": "reconnecting -- you reach out first or wait?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "reach out first",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "wait",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_meeting",
+      "text": "meetings -- energizing or draining?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "energizing",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "draining",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_email",
+      "text": "email -- answer right away or batch it?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "right away",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "batch it",
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_notes",
+      "text": "remembering -- write it down or trust your head?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "write it down",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "trust my head",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_risk",
+      "text": "a bold approach -- pitch it or keep it safe?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "pitch it",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "keep it safe",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_done",
+      "text": "good enough -- ship it or one more pass?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "ship it",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "one more pass",
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_help",
+      "text": "stuck -- ask for help quick or wrestle it solo?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "ask quick",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "wrestle solo",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_plants",
+      "text": "a home needs -- lots of plants or clean and bare?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "lots of plants",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "clean + bare",
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_pets",
+      "text": "a full house -- pets everywhere or calm and quiet?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "pets everywhere",
+          "traits": {
+            "playfulness": 1
+          }
+        },
+        {
+          "label": "calm + quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_routine2",
+      "text": "mornings -- same ritual or different each day?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "same ritual",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "different each day",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_minimal",
+      "text": "stuff -- keep only essentials or treasure your things?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "essentials only",
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        },
+        {
+          "label": "treasure things",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_walk",
+      "text": "getting around -- walk when you can or fastest route?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "walk when i can",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        },
+        {
+          "label": "fastest route",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_collect",
+      "text": "are you a collector or a declutterer?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "a collector",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "a declutterer",
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_spont",
+      "text": "a free saturday -- planned outing or see how you feel?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "planned outing",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "see how i feel",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_city",
+      "text": "ideal living -- lively city or quiet town?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "lively city",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "quiet town",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_chrono_peak2",
+      "text": "creativity strikes -- early light or late dark?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "early light",
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "late dark",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_food_try2",
+      "text": "a menu -- the chef's special or your safe pick?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "chef's special",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "my safe pick",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_reward_streak",
+      "text": "what motivates -- a visible streak or a fun reward?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "a streak",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "a reward",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_feedback_public",
+      "text": "praise -- in front of others or a private word?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "in front of others",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social",
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "private word",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_humor_meme",
+      "text": "online -- memes and jokes or thoughtful threads?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "memes + jokes",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "thoughtful threads",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "humor": "serious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_risk_invest",
+      "text": "trying something new -- jump in or test the water?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "jump in",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "test the water",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_struct_todo",
+      "text": "your to-do list -- detailed and ordered or loose and short?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "detailed + ordered",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "loose + short",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_social_energy3",
+      "text": "after a big event -- buzzing or wiped out?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "buzzing",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "wiped out",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_deepday",
+      "text": "an open day -- one deep dive or many little things?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "one deep dive",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "many little things",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_aes_wallpaper",
+      "text": "a screen -- busy and colorful or calm and plain?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "busy + colorful",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        },
+        {
+          "label": "calm + plain",
+          "prefs": {
+            "aesthetics": "minimal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_chatty_streams",
+      "text": "while you work -- a running commentary or only when it matters?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "running commentary",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "only when it matters",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_pace_walk2",
+      "text": "a good walk -- brisk and purposeful or slow and wandering?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "brisk",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "slow + wandering",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_humor_self",
+      "text": "do you laugh at yourself easily or take things to heart?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "laugh easily",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "humor": "playful"
+          }
+        },
+        {
+          "label": "take to heart",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "feedback_style": "gentle"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_reward_self2",
+      "text": "a long task done -- reward yourself or just relief?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "reward myself",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "treats"
+          }
+        },
+        {
+          "label": "just relief",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_risk_speak",
+      "text": "an unpopular opinion -- say it or hold back?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "say it",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold",
+            "feedback_style": "direct"
+          }
+        },
+        {
+          "label": "hold back",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_struct_pack",
+      "text": "packing a bag -- a checklist or last-minute toss?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "a checklist",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "last-minute toss",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_one2",
+      "text": "notifications on while working -- on or off?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "off",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        },
+        {
+          "label": "on",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "multitask"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_text2",
+      "text": "group chats -- active and chatty or muted and lurking?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "active + chatty",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty"
+          }
+        },
+        {
+          "label": "muted + lurking",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_creative_risk",
+      "text": "a wild idea -- run with it or refine it down?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "run with it",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "refine it down",
+          "prefs": {
+            "structure": "structured"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_comfort_words",
+      "text": "encouragement -- big and loud or steady and quiet?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "big + loud",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "steady + quiet",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_food_routine",
+      "text": "lunch -- the same favorite or something different daily?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "same favorite",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        },
+        {
+          "label": "something different",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_movie",
+      "text": "movie night -- action and thrills or cozy and gentle?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "action + thrills",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "cozy + gentle",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_start",
+      "text": "a blank task -- start at the hard part or warm up easy?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "hard part first",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        },
+        {
+          "label": "warm up easy",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_alone2",
+      "text": "real rest looks like -- total solitude or easy company?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "total solitude",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "easy company",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_mood_morning2",
+      "text": "waking up -- ready to chat or need a slow start?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "ready to chat",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "chattiness": "chatty",
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "slow start",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "chattiness": "chill"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_weather2",
+      "text": "perfect day out -- sunny and busy or grey and calm?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "sunny + busy",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "grey + calm",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "aesthetics": "cozy"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_tools2",
+      "text": "starting out -- learn the rules first or break them?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "learn the rules",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "break them",
+          "traits": {
+            "sass": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_party2",
+      "text": "a party winding down -- last to leave or slip out early?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "last to leave",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "slip out early",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_focus_morn2",
+      "text": "your best deep work happens -- before noon or after dark?",
+      "dim": "focus",
+      "options": [
+        {
+          "label": "before noon",
+          "prefs": {
+            "chronotype": "early"
+          }
+        },
+        {
+          "label": "after dark",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "chronotype": "night"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_detail2",
+      "text": "a plan -- spell out every step or sketch the shape?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "every step",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "sketch the shape",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "structure": "spontaneous"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_play_quiet2",
+      "text": "your idea of play -- loud and active or calm and clever?",
+      "dim": "play",
+      "options": [
+        {
+          "label": "loud + active",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "calm + clever",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "focus_style": "deep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_comfort_check2",
+      "text": "when you go quiet -- want a gentle check-in or full space?",
+      "dim": "comfort",
+      "options": [
+        {
+          "label": "gentle check-in",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "comfort_style": "cheer"
+          }
+        },
+        {
+          "label": "full space",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "comfort_style": "space"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_reward_praise2",
+      "text": "doing well -- told often or trusted to just know?",
+      "dim": "mood",
+      "options": [
+        {
+          "label": "told often",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "reward": "praise"
+          }
+        },
+        {
+          "label": "trusted to know",
+          "traits": {
+            "shyness": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_life_morning3",
+      "text": "ideal morning -- a workout or a slow coffee?",
+      "dim": "lifestyle",
+      "options": [
+        {
+          "label": "a workout",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "slow coffee",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_food_adventure2",
+      "text": "cuisine -- stick to favorites or always try new?",
+      "dim": "food",
+      "options": [
+        {
+          "label": "stick to favorites",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "risk": "cautious"
+          }
+        },
+        {
+          "label": "always try new",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "risk": "bold"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_work_pair",
+      "text": "tough problems -- pair up or heads-down alone?",
+      "dim": "work",
+      "options": [
+        {
+          "label": "pair up",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        },
+        {
+          "label": "heads-down",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_create_done2",
+      "text": "a piece is done when -- it's perfect or it's out the door?",
+      "dim": "creativity",
+      "options": [
+        {
+          "label": "it's perfect",
+          "prefs": {
+            "structure": "structured"
+          }
+        },
+        {
+          "label": "out the door",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_soc_deep",
+      "text": "conversations -- deep and few or light and many?",
+      "dim": "social",
+      "options": [
+        {
+          "label": "deep + few",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "social_energy": "solitary"
+          }
+        },
+        {
+          "label": "light + many",
+          "traits": {
+            "playfulness": 1
+          },
+          "prefs": {
+            "social_energy": "social"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rr_rest_holiday",
+      "text": "a holiday -- packed with activities or pure relaxation?",
+      "dim": "rest",
+      "options": [
+        {
+          "label": "packed",
+          "traits": {
+            "curiosity": 1
+          },
+          "prefs": {
+            "pace": "fast"
+          }
+        },
+        {
+          "label": "pure relaxation",
+          "traits": {
+            "shyness": 1
+          },
+          "prefs": {
+            "pace": "slow"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -19,8 +19,14 @@ light-gray checkerboard. So we:
 import os
 import sys
 import numpy as np
+from pathlib import Path
 from PIL import Image
 from scipy import ndimage
+
+# Source sheets + the sprite library live at the repo root; this slicer now
+# lives in tools/, so resolve those paths relative to the repo root (parent of
+# tools/) rather than the current working directory.
+ROOT = Path(__file__).resolve().parent.parent
 
 ALPHA_TH = 24
 ROW_MIN_PIX = 6
@@ -163,8 +169,8 @@ for _c in range(6):
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "gg2"
     if which == "gg2":
-        slice_sheet("Cat examples/Tabby2/cat-2 emotions (GG_2).png",
-                    "cat4_states", 6, 5, GG2_NAMES)
+        slice_sheet(str(ROOT / "Cat examples/Tabby2/cat-2 emotions (GG_2).png"),
+                    str(ROOT / "cat4_states"), 6, 5, GG2_NAMES)
     elif which == "eei":
-        slice_sheet("Cat examples/Tabby2/Gemini_Generated_Image_eei3tweei3tweei3.png",
-                    "cat4_eei_raw", 10, 10, EEI_NAMES, inset=4, strip_top=True)
+        slice_sheet(str(ROOT / "Cat examples/Tabby2/Gemini_Generated_Image_eei3tweei3tweei3.png"),
+                    str(ROOT / "cat4_eei_raw"), 10, 10, EEI_NAMES, inset=4, strip_top=True)

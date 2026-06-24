@@ -18,6 +18,11 @@ import time
 import webbrowser
 from pathlib import Path
 
+try:                                  # keep the dashboard zero-dep if chatter moves
+    from chatter import BOND_GRACE_H as _GRACE_H
+except Exception:
+    _GRACE_H = 10
+
 HERE = Path(__file__).parent
 METRICS = HERE / "cat_metrics.json"
 STATE = HERE / "cat_state.json"
@@ -180,6 +185,20 @@ def build():
         ("local hits", C_GREEN, col("local_hits")),
     ], dom=(0, max_count))
 
+    # --- offline self-sufficiency (Phase 1): library vs API questions ---
+    offline = _line_chart(days, [
+        ("local question rate", C_GREEN, col("local_question_rate")),
+        ("local hit rate", C_BLUE, col("local_hit_rate")),
+    ])
+    off_flips = sum(v for v in col("offline_flips") if v) if days else 0
+
+    # --- bond trajectory (Phase 1b): affection over days, decays when ignored ---
+    aff_series = col("affection")
+    aff_max = max([1] + [v for v in aff_series if v is not None])
+    bond_trend_chart = _line_chart(days, [
+        ("bond (affection)", C_PINK, aff_series),
+    ], dom=(0, aff_max))
+
     # --- personality + behaviour + rhythm ---
     trait_bars = _bars([(k, traits.get(k, 0), C_PINK) for k in
                         ("playfulness", "curiosity", "shyness", "sass")])
@@ -277,6 +296,10 @@ def build():
   <div class="grid">
     <div class="card"><h2>Memory quality over time</h2>{quality}</div>
     <div class="card"><h2>API reliance (lower api = better)</h2>{reliance}</div>
+    <div class="card"><h2>Offline self-sufficiency (higher = more independent)</h2>{offline}
+      <div class="mute" style="font-size:11px;margin-top:8px">local question rate = share of quiz questions she pulled from her own library instead of the API. {off_flips} online/offline flip(s) recorded.</div></div>
+    <div class="card"><h2>Bond trajectory (cools when neglected)</h2>{bond_trend_chart}
+      <div class="mute" style="font-size:11px;margin-top:8px">affection rises with attention and slowly decays after ~{int(_GRACE_H)}h of neglect, floored so she never forgets you.</div></div>
     <div class="card"><h2>Personality traits</h2>{trait_bars}</div>
     <div class="card"><h2>Behaviour affinity (what earns your attention)</h2>{aff_bars}</div>
     <div class="card full"><h2>Behaviour usage — time spent per state</h2>{beh_bars}

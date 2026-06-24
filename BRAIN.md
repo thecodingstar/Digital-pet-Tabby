@@ -89,8 +89,25 @@ human's presence. She holds still while a quiz card is on screen.
 
 ### Interactions (from the mascot)
 `feed()` hunger−85 + reinforce + note-active; `receive_pet()` social−30, consoles
-if fear>35 (fear−55, trust+0.1) else fear−8, + reinforce; `scare(amount)` applies
-trust/jumpiness then cowers; `force_sleep()` caps energy at 25.
+if fear>35 (fear−55, trust+0.1) else fear−8, + reinforce; `scare(amount, trigger)`
+applies trust/jumpiness then cowers; `force_sleep()` caps energy at 25.
+
+### Expanded fear triggers (Phase 4)
+`scare()` takes a `trigger` label and records `last_fear_trigger`/`last_fear_effective`
+so the mascot can log a telemetry `fear` event. The mascot's `_fear_trigger()` maps
+Claude-state transitions to small, trust/shyness/comfort-damped spikes — beyond the
+original `tool_failure`:
+- **error_storm** — ≥3 `tool_failure`s within 25s → a bigger spike (jumpiness already
+  escalates repeated scares); recovers as successes return.
+- **permission** — a permission prompt unsettles, escalating if repeated.
+- **activity_spike** — first activity after >30min idle makes a still-jumpy cat
+  flinch once, then curiosity takes over.
+- **neglect** — >24h with no attention nudges mild anxiety + bumps `social` so she
+  seeks you (checked ~every 2min in the tick).
+- **drag** — a fast yank across the taskbar (Phase 2) startles; a slow drag doesn't.
+Each is small and trust-damped, so a bonded/bold cat barely reacts and a new/shy one
+is more skittish. Tunables sit near `DRIFT`/`URGENT` (`brain.py`) and the trigger
+amounts in `taskbar_mascot_cat.py`.
 
 ---
 
@@ -154,14 +171,30 @@ on-voice and pass the quality gate.
 When idle and comfortable (`affection ≥ QUIZ_MIN_AFFECTION`, `QUIZ_COOLDOWN`
 between asks, lifetime cap `QUIZ_MAX`), Tabby poses a short question with 2–3
 clickable answers (UI `QuestionBubble`). Questions are **API-generated for
-uniqueness** (`_llm_question`, parsed from `question | opt | opt`), falling back
-to a static `QUESTIONS` bank offline. The answer is stored in `user_profile`
-(`q_id → {q, a, ts}`), crystallized as a temperament fact, and — for static-bank
-options carrying `traits` — nudges her own personality (`TRAIT_NUDGE`, bounded).
-`user_profile` feeds the system prompt ("what the human told you they like: …")
-and `quiet_factor()` scales the idle musing cadence to her learned chattiness.
-All on the worker thread; `maybe_ask`/`poll_question`/`answer_question` mirror
-the non-blocking say/poll pattern.
+uniqueness** when online (`_llm_question`, parsed from `question | opt | opt`);
+offline / out of budget the strong fallback is the **tagged
+`questions_library.json`** (200+ items) via `_pick_library_q`, which tracks used
+ids through the `user_profile` keyset so nothing repeats until the bank is
+exhausted. Answered API questions are appended to `learned_questions.json`
+(deduped, capped) for offline reuse. The answer is stored in `user_profile`
+(`q_id → {q, a, ts, prefs}`), crystallized as a fact (the option's tagged `fact`
+if present), and — for options carrying `traits` — nudges her own personality
+(`TRAIT_NUDGE`, bounded). Structured `prefs` are read **directly** by
+`behavior_hints` (keyword `_pref_extract` is only the fallback for untagged API
+questions), so offline answers are lossless. `user_profile` feeds the system
+prompt and `quiet_factor()`. All on the worker thread;
+`maybe_ask`/`poll_question`/`answer_question` mirror the say/poll pattern.
+
+### Bond decay (Phase 1b) — the bond can cool
+Affection is no longer monotonic. A real attention event (pet/feed/console/quiz)
+stamps `last_attention` (and only those events — `save()` rewrites `last_seen`,
+never `last_attention`). `_decay_bond()` runs on load and on a 60s worker tick:
+after `BOND_GRACE_H` (~10h) of neglect she loses `BOND_DECAY_PER_DAY` (~4/day)
+scaled by the neglected time, **loyalty-damped** (`rate·(1−0.30·tier_frac)`, higher
+tiers cool slower) and floored at `BOND_FLOOR=25` (≥ the quiz gate, so neglect
+can't silently disable quizzing). It's wall-clock based, so it works across
+restarts and while the app is closed. `idle_hours()` exposes the gap (also used by
+the Phase-4 neglect trigger). Bond changes emit a telemetry `bond` event.
 
 ### Reflection → confidence facts (R1/R2)
 Every ~8 interactions one LLM call distils recent observations into a
@@ -183,8 +216,16 @@ top-confidence facts. Reflection is skipped under budget pressure (R2).
 
 ### Telemetry (P2) — `cat_metrics.json`
 Per day: served, api, reflection, local_hits, local_hit_rate, avg_served_sim,
-mean_served_reward, repeat_rate. Atomic, worker-thread only. The sim harness reads
-the same metrics.
+mean_served_reward, repeat_rate, plus **local_question_rate** (library vs API
+quiz questions), **offline_flips** (online↔offline transitions), and **affection**
+(bond trajectory). Atomic, worker-thread only. The sim harness reads the same
+metrics; the dashboard adds offline-self-sufficiency + bond-trajectory cards.
+
+### Event telemetry (Phase 0) — `Cat.log_event`
+A separate, in-memory bounded ring of `{ts, kind, …}` events (`bond`/`fear`/`net`)
+following the field contract in `docs/MONITORING.md`. For now it writes nothing to
+disk — the Phase-6 monitor will swap the body for a rotating `cat_telemetry.jsonl`.
+Producers (bond decay, fear triggers, the online flag) already emit them.
 
 ---
 
@@ -192,13 +233,16 @@ the same metrics.
 
 | file | holds | churn | gitignored |
 |------|-------|-------|------------|
-| `cat_state.json` | personality: affection, traits, **confidence facts**, mood, interactions, persisted **drives + valence/arousal + affinity + trust + jumpiness + active_hours**, `schema_version` | slow | yes |
+| `cat_state.json` | personality: affection, **last_attention**, traits, **confidence facts**, **user_profile (w/ structured prefs)**, mood, interactions, persisted **drives + valence/arousal + affinity + trust + jumpiness + active_hours**, `schema_version` | slow | yes |
 | `cat_brain.json` | learned `lines` (line, ctx, **cstruct, reward, uses, last_used**), daily `calls`, `schema_version` | fast | yes |
 | `cat_metrics.json` | daily telemetry | fast | yes |
+| `questions_library.json` | 200+ tagged quiz questions | static | **no (tracked)** |
+| `learned_questions.json` | API-grown quiz questions for offline reuse | slow | yes |
 | `.env` / `cat_config.json` | API key / base_url / model | rare | yes |
 
-`schema_version=2`; `migrate` on load adds new fields with safe defaults and never
-loses data. Drives + learning persist every 30s and on quit.
+`schema_version=4`; `migrate`/self-heal on load adds new fields with safe defaults
+(e.g. `last_attention` seeds to now) and never loses data. Drives + learning
+persist every 30s and on quit.
 
 ---
 

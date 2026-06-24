@@ -413,6 +413,20 @@ class Mascot(QWidget):
         if self.right_bound <= self.left_bound:  # narrow / side taskbar guard
             self.right_bound = self.left_bound + 1
             self.x = self.left_bound
+        # drag-to-move (Phase 2): a left press becomes a drag past a 6px deadzone,
+        # otherwise it's a pet (decided on release). Tracked here, applied in the
+        # mouse handlers; on release she free-wanders from the new spot.
+        self._dragging = False
+        self._press_gx = 0.0
+        self._press_x = 0.0
+        self._press_t = 0.0
+        self._drag_last_gx = 0.0
+        # expanded fear triggers (Phase 4): track recent failures (error storm),
+        # repeated permission prompts, and the last activity time (activity spike).
+        self._fail_times = []
+        self._perm_count = 0
+        self._last_activity_t = time.time()
+        self._next_neglect_check = time.time() + 120
         self.cs = None                # current Claude state this tick
         self.prev_cs = None
         self.last_say = 0.0
@@ -488,17 +502,93 @@ class Mascot(QWidget):
                     and random.random() < 0.05):   # an occasional glance, not a stare
                 self.brain._set("watch")
 
-    def mousePressEvent(self, e):
-        if e.button() == Qt.RightButton:
-            self._context_menu(e.globalPos())
-            return
-        res = self.brain.receive_pet()       # left-click = pet (or console if scared)
+    DRAG_DEADZONE = 6        # px of movement before a press becomes a drag
+    FAST_DRAG_PXPS = 1300    # drag faster than this startles her (Phase 4)
+
+    def _do_pet(self):
+        """A genuine click (not a drag) = pet, or console if she's scared."""
+        res = self.brain.receive_pet()
         if res == "consoled":
             self.cat.console()
         else:
             self.cat.pet()
         self.cat.report_outcome(1.0)         # attention -> the last line "landed"
         self.last_say = 0                    # let the reaction speak now
+        self.update()
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.RightButton:
+            self._context_menu(e.globalPos())
+            return
+        if e.button() != Qt.LeftButton:
+            return
+        # don't decide yet: a small press = pet (on release), a drag = move.
+        # Never drag while a quiz card pins her in place.
+        self._dragging = False
+        self._press_gx = float(e.globalPos().x())
+        self._drag_last_gx = self._press_gx
+        self._press_x = float(self.x)
+        self._press_t = time.time()
+
+    def mouseMoveEvent(self, e):
+        if not (e.buttons() & Qt.LeftButton):
+            return
+        if self.qbubble.q is not None:           # pinned by a quiz card
+            return
+        dx = float(e.globalPos().x()) - self._press_gx
+        if not self._dragging and abs(dx) < self.DRAG_DEADZONE:
+            return
+        self._dragging = True
+        nx = max(self.left_bound, min(self.right_bound, self._press_x + dx))
+        moved = nx - self.x
+        if moved:
+            self.facing = "left" if moved < 0 else "right"
+        self.x = nx
+        self._drag_last_gx = float(e.globalPos().x())
+        self.move(int(self.x), self.y())
+        self._raise_above_taskbar()              # keep her pinned to the bar top
+
+    def _fear_trigger(self, cs, now):
+        """Map a Claude state transition to a (fear_amount, trigger) or None
+        (Phase 4). Amounts are small; brain.scare() trust/shyness/comfort-damps
+        them, so a bonded cat barely reacts and a new/shy one is more skittish."""
+        # activity spike: first activity after a long quiet stretch makes a still-
+        # jumpy cat flinch once, then curiosity takes over.
+        spike = None
+        if cs in ("tool_running", "tool_success", "tool_failure", "question", "done"):
+            gap = now - self._last_activity_t
+            self._last_activity_t = now
+            if gap > 1800 and self.brain.jumpiness < 0.3:
+                spike = (10, "activity_spike")
+        if cs != "permission":
+            self._perm_count = 0
+        if cs == "tool_failure":
+            self._fail_times = [t for t in self._fail_times if now - t < 25]
+            self._fail_times.append(now)
+            if len(self._fail_times) >= 3:       # a burst in a short window overwhelms
+                return (60, "error_storm")
+            return (45, "tool_failure")
+        if cs == "permission":                   # denials/prompts unsettle, escalating
+            self._perm_count += 1
+            return (6 + 5 * min(self._perm_count, 4), "permission")
+        return spike
+
+    def mouseReleaseEvent(self, e):
+        if e.button() != Qt.LeftButton:
+            return
+        if not self._dragging:
+            self._do_pet()                       # it was a click, not a drag
+            return
+        # it was a drag: resume roaming from here, facing the way she was dragged.
+        total = self._drag_last_gx - self._press_gx
+        self.dir = -1 if total < 0 else 1
+        dt = max(1e-3, time.time() - self._press_t)
+        if abs(total) / dt > self.FAST_DRAG_PXPS:    # a quick yank startles her
+            self.brain.scare(12, trigger="drag")
+            self.cat.log_event("fear", amount=12, trigger="drag",
+                               effective=self.brain.last_fear_effective)
+            self.last_say = 0
+        self._dragging = False
         self.update()
 
     def _context_menu(self, gpos):
@@ -602,10 +692,15 @@ class Mascot(QWidget):
         if cs != self.prev_cs:
             info = st.get("lastToolName") if st else None
             style = self.brain.hints.get("prefs", {}).get("comfort_style")  # X9
-            if cs == "tool_failure":
-                self.brain.scare(45)         # errors startle her (modulated in scare)
-                self.cat.report_outcome(0.0)  # a scare = the last line didn't help
-                if style == "cheer":         # they want cheering -> speak now
+            trig = self._fear_trigger(cs, now)   # Phase 4: more than tool_failure
+            if trig:
+                amount, trigger = trig
+                self.brain.scare(amount, trigger=trigger)
+                self.cat.log_event("fear", amount=round(amount, 1), trigger=trigger,
+                                   effective=self.brain.last_fear_effective)
+                if trigger in ("tool_failure", "error_storm"):
+                    self.cat.report_outcome(0.0)  # a scare = the last line didn't help
+                if style == "cheer":              # they want cheering -> speak now
                     self.last_say = 0
             if cs in ("tool_success", "tool_failure", "question", "done", "auth_success"):
                 if cs in ("tool_success", "tool_failure", "question", "done"):
@@ -667,7 +762,8 @@ class Mascot(QWidget):
             self._mask_key = id(cur)
             self._apply_mask(cur)
 
-        if self.speed and self.qbubble.q is None:     # don't wander off the quiz card
+        # don't wander off the quiz card, or fight an in-progress drag
+        if self.speed and self.qbubble.q is None and not self._dragging:
             self.x += self.dir * self.speed
             self.facing = "left" if self.dir < 0 else "right"
             if self.x <= self.left_bound:
@@ -675,6 +771,16 @@ class Mascot(QWidget):
             elif self.x >= self.right_bound:
                 self.x = self.right_bound; self.dir = -1
             self.move(int(self.x), self.y())
+
+        # neglect (Phase 4): after a long stretch with no attention she gets a
+        # little anxious and seeks you out — gentle, trust-damped, checked rarely.
+        if now >= self._next_neglect_check:
+            self._next_neglect_check = now + 120
+            if self.cat.idle_hours() > 24 and self.brain.fear < 25:
+                self.brain.scare(8, trigger="neglect")
+                self.brain.social = min(100.0, self.brain.social + 15)  # seeks you
+                self.cat.log_event("fear", amount=8, trigger="neglect",
+                                   effective=self.brain.last_fear_effective)
 
         # drive-driven self-expression (hunger / loneliness / fear)
         if self.mode == "brain":
@@ -709,7 +815,7 @@ class Mascot(QWidget):
             else:
                 doing = DOING.get(self.brain.behavior, self.brain.behavior)
             self.info.update_info(doing, self.brain.drives(),
-                                  int(self.cat.affection()),
+                                  min(100, int(self.cat.affection())),  # bar caps at 100%
                                   self.x + DISP / 2, self.y() - 4)
 
         # persist drives periodically so they survive the next restart
@@ -742,6 +848,7 @@ class Mascot(QWidget):
         Also refresh behaviour hints on this ~30s cadence (X8) — it takes the
         chatter lock, so never per tick."""
         self.cat.set_drives(self.brain.snapshot_drives())
+        self.cat.set_mood(self.brain.mood)        # live mood -> persisted state
         self.brain.apply_hints(self.cat.behavior_hints())
         self.cat.save()
         self.cat.save_know()

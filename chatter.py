@@ -155,9 +155,25 @@ CONFIG = HERE / "cat_config.json"
 STATE = HERE / "cat_state.json"
 KNOW = HERE / "cat_brain.json"      # offline learned knowledge (grows over time)
 METRICS = HERE / "cat_metrics.json"  # telemetry (fast-churn, gitignored)
+QLIB = HERE / "questions_library.json"      # large tagged question bank (tracked)
+QLEARNED = HERE / "learned_questions.json"  # API questions kept for offline reuse
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4          # v4: last_attention (bond decay) + structured quiz prefs
 RECALL_MODE = "structured"  # "structured" (default) | "vector" (legacy fallback)
+
+# --- network health (Phase 1): stop hammering a dead endpoint -----------------
+NET_FAIL_MAX = 3            # consecutive failures before we declare "offline"
+NET_PROBE_COOLDOWN = 120    # seconds offline before a single re-probe is allowed
+
+# --- bond decay on neglect (Phase 1b): affection cools if she's ignored -------
+# Wall-clock decay (computed on load + on the persist tick) so it works across
+# restarts and while the app is closed. Loyalty-damped + floored so a long-bonded
+# cat cools and gets wary but never forgets you.
+BOND_GRACE_H = 10.0         # hours of no attention before decay starts
+BOND_DECAY_PER_DAY = 4.0    # affection lost per neglected day past the grace window
+BOND_FLOOR = 25             # never decays below this (>= QUIZ_MIN_AFFECTION so
+                            # neglect can't silently disable the get-to-know quiz)
+BOND_LOYALTY_DAMP = 0.30    # higher tiers cool slower: rate * (1 - DAMP * tier_frac)
 
 DAILY_BUDGET = 600       # max API calls/day (Groq free tier is 1000)
 LINE_CAP = 24            # cached lines kept per event
@@ -197,7 +213,8 @@ DEFAULT_STATE = {
     "quiz": {"last_t": 0, "asked": [], "recent_q": []},   # quiz bookkeeping (C)
     "recent": [],              # rolling log of recent observations (strings)
     "mood": "content",
-    "last_seen": 0.0,
+    "last_seen": 0.0,          # rewritten every save (liveness, NOT neglect)
+    "last_attention": 0.0,     # set ONLY on real attention; drives bond decay (1b)
 }
 
 # --- get-to-know-you quiz (C): she asks, you click, she adapts ---------------
@@ -205,6 +222,13 @@ QUIZ_MIN_AFFECTION = 25      # only ask once she's comfortable with you
 QUIZ_COOLDOWN = 3 * 3600     # seconds between questions (don't nag)
 QUIZ_MAX = 40                # lifetime cap on stored profile answers
 TRAIT_NUDGE = 0.08           # how far one answer shifts a personality trait
+# Structured preference dimensions a tagged answer can teach (Phase 3). The first
+# four are the legacy keyword-extracted set; the rest are new and library-only.
+# behavior_hints() surfaces all of them; the brain consumes what it understands
+# (comfort_style today) and ignores the rest — adding keys here is safe.
+PREF_KEYS = ("chattiness", "comfort_style", "chronotype", "pace",
+             "social_energy", "humor", "risk", "structure",
+             "feedback_style", "focus_style", "reward", "aesthetics")
 # Static fallback bank (used offline / when the API question can't be parsed).
 # `traits` on an option nudges her own personality toward complementing you.
 QUESTIONS = [
@@ -270,11 +294,16 @@ CANNED = {
 }
 
 
+AFFECTION_MAX = 200          # bond keeps growing past the old 100 cap (prestige)
+
+
 def _affection_stage(a):
-    if a < 10:   return "a wary new acquaintance who is still sizing the human up"
-    if a < 35:   return "warming up to the human, cautiously friendly"
-    if a < 70:   return "fond of the human, comfortable and playful"
-    return "deeply bonded to the human, affectionate and loyal"
+    if a < 10:    return "a wary new acquaintance who is still sizing the human up"
+    if a < 35:    return "warming up to the human, cautiously friendly"
+    if a < 70:    return "fond of the human, comfortable and playful"
+    if a < 100:   return "deeply bonded to the human, affectionate and loyal"
+    if a < 150:   return "devoted to the human, who is her favourite person"
+    return "inseparable from the human, utterly at home and adoring"
 
 
 def _time_of_day():
@@ -288,18 +317,30 @@ class Cat:
         self.state = self._load_state()
         self.cfg = self._load_cfg()
         self.know = self._load_know()   # offline learned lines + call budget
+        self.qlib = self._load_qlib()   # large tagged question bank (Phase 3)
         self._req = deque()        # pending (event, ctx)
         self._out = deque()        # ready lines
         self._recent_ids = deque(maxlen=ANTIREPEAT_K)   # session anti-repeat (M5)
         self._last_served = None   # (event, line) most recently shown, for reward
         self._q_ready = None       # a built quiz question waiting for the UI (C)
         self._q_pending = False    # a quiz question is being built on the worker (C)
+        # network health (Phase 1): a single online flag, flipped at the one
+        # network choke point, so we stop hammering a dead endpoint deliberately.
+        self.online = True
+        self._net_fails = 0
+        self._net_probe_at = 0.0
+        # telemetry event sink (Phase 0): bounded in-memory ring for now; the
+        # Phase-6 monitor will swap the body of log_event() for a JSONL append.
+        self._events = deque(maxlen=256)
         self._metrics = {"served": 0, "local_hits": 0, "api": 0,
                          "reflection": 0, "sim_sum": 0.0, "reward_sum": 0.0,
-                         "repeats": 0}
+                         "repeats": 0, "q_local": 0, "q_api": 0, "offline_flips": 0}
         # one reentrant lock guards state / know / queues. The UI thread and the
         # worker thread both touch them; network calls happen OUTSIDE the lock.
+        # Created before any locked helper runs (e.g. _decay_bond below).
         self._lock = threading.RLock()
+        # bond decay catch-up for time elapsed while the app was closed (1b)
+        self._decay_bond(persist=False)
         self._worker = threading.Thread(target=self._loop, daemon=True)
         self._worker.start()
 
@@ -378,6 +419,60 @@ class Cat:
         except Exception:
             pass
 
+    # --- telemetry event sink (Phase 0) --------------------------------
+    def log_event(self, kind, **fields):
+        """Record one telemetry event. For now this is a cheap, bounded in-memory
+        ring (writes nothing to disk); the Phase-6 monitor replaces the body with
+        a rotating JSONL append. Must never raise into a caller — it's wired into
+        hot paths (bond/fear/net). See docs/MONITORING.md for the field contract."""
+        try:
+            rec = {"ts": int(time.time()), "kind": kind}
+            rec.update(fields)
+            self._events.append(rec)
+        except Exception:
+            pass
+
+    # --- bond decay on neglect (Phase 1b) ------------------------------
+    def _touch_attention(self):
+        """Mark a genuine attention event (pet/feed/console/quiz answer). Caller
+        holds the lock. This is the ONLY writer of last_attention — save() must
+        not touch it, or neglect can never be measured."""
+        self.state["last_attention"] = time.time()
+
+    def _decay_bond(self, persist=True):
+        """Cool affection toward BOND_FLOOR after a grace window of no attention.
+        Wall-clock based (works across restarts / while closed), loyalty-damped so
+        higher tiers cool slower. Idempotent: advances last_attention by the time
+        it just charged decay for, so repeated calls don't double-count."""
+        try:
+            with self._lock:
+                now = time.time()
+                la = float(self.state.get("last_attention", 0.0) or 0.0)
+                if la <= 0.0:                      # first run / migration: seed, no decay
+                    self.state["last_attention"] = now
+                    return
+                idle_h = (now - la) / 3600.0
+                if idle_h <= BOND_GRACE_H:
+                    return
+                aff = float(self.state.get("affection", 0))
+                if aff <= BOND_FLOOR:
+                    self.state["last_attention"] = now   # nothing to lose; reset clock
+                    return
+                neglected_days = (idle_h - BOND_GRACE_H) / 24.0
+                tier_frac = min(1.0, aff / AFFECTION_MAX)        # loyalty damping
+                rate = BOND_DECAY_PER_DAY * (1.0 - BOND_LOYALTY_DAMP * tier_frac)
+                new_aff = max(BOND_FLOOR, aff - rate * neglected_days)
+                delta = new_aff - aff
+                if delta < 0:
+                    self.state["affection"] = new_aff
+                    self.state["last_attention"] = now   # charged up to now
+                    self.log_event("bond", affection=round(new_aff, 1),
+                                   delta=round(delta, 2), reason="decay")
+            if delta < 0 and persist:
+                self.save()
+        except Exception:
+            pass
+
     def _dotenv(self):
         """Parse a local .env (KEY=value lines) without any dependency."""
         env = {}
@@ -432,6 +527,93 @@ class Cat:
                 self.know["calls"] = {d: self.know["calls"][d] for d in days}
                 data = json.dumps(self.know, indent=2, ensure_ascii=False)
             self._atomic_write(KNOW, data)         # file IO outside the lock
+        except Exception:
+            pass
+
+    # --- tagged question bank (Phase 3) --------------------------------
+    @staticmethod
+    def _norm_q(q):
+        """Validate + normalise one library question dict. Returns a clean copy or
+        None. Tolerates partial/malformed entries (self-heal, like the line pool)."""
+        if not isinstance(q, dict):
+            return None
+        text = _clean_q(q.get("text"))
+        opts = []
+        for o in (q.get("options") or []):
+            if not isinstance(o, dict):
+                continue
+            lab = _clean_q(o.get("label"), 24)
+            if not lab:
+                continue
+            co = {"label": lab}
+            tr = o.get("traits")
+            if isinstance(tr, dict):
+                co["traits"] = {k: v for k, v in tr.items()
+                                if k in ("playfulness", "curiosity", "shyness", "sass")}
+            pr = o.get("prefs")
+            if isinstance(pr, dict):
+                co["prefs"] = {k: v for k, v in pr.items() if k in PREF_KEYS}
+            fact = _clean_line(o.get("fact")) if o.get("fact") else None
+            if fact:
+                co["fact"] = fact
+            opts.append(co)
+        if not text or len(opts) < 2:
+            return None
+        qid = str(q.get("id") or "lib_" + str(abs(zlib.crc32(text.encode()))))
+        return {"id": qid, "text": text, "dim": str(q.get("dim", "")),
+                "options": opts[:3]}
+
+    def _load_qlib(self):
+        """Load the tagged question bank: the shipped library plus any API-grown
+        questions kept for offline reuse. Deduped by normalised text. Empty/missing
+        files are fine — she just falls back to the inline QUESTIONS bank."""
+        out, seen = [], set()
+        for path in (QLIB, QLEARNED):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            items = raw.get("questions", raw) if isinstance(raw, dict) else raw
+            if not isinstance(items, list):
+                continue
+            for q in items:
+                nq = self._norm_q(q)
+                if not nq:
+                    continue
+                key = re.sub(r"[^a-z0-9]+", " ", nq["text"].lower()).strip()
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(nq)
+        return out
+
+    def _append_learned_q(self, q):
+        """Persist an answered API question to learned_questions.json for offline
+        reuse (deduped by normalised text, capped). Caller need not hold the lock;
+        file IO is atomic. Best-effort — never raises into the worker."""
+        try:
+            nq = self._norm_q(q)
+            if not nq:
+                return
+            try:
+                raw = json.loads(QLEARNED.read_text(encoding="utf-8"))
+                items = raw.get("questions", []) if isinstance(raw, dict) else raw
+            except Exception:
+                items = []
+            if not isinstance(items, list):
+                items = []
+            key = re.sub(r"[^a-z0-9]+", " ", nq["text"].lower()).strip()
+            for ex in items:
+                exk = re.sub(r"[^a-z0-9]+", " ",
+                             str((ex or {}).get("text", "")).lower()).strip()
+                if exk == key:
+                    return                         # already have it
+            items.append(nq)
+            items = items[-300:]                   # cap growth
+            self._atomic_write(QLEARNED, json.dumps({"version": 1, "questions": items},
+                                                    indent=2, ensure_ascii=False))
+            with self._lock:                       # make it usable offline now
+                self.qlib.append(nq)
         except Exception:
             pass
 
@@ -621,21 +803,30 @@ class Cat:
             if len(self._req) < 3:
                 self._req.append((event, ctx or {}))
 
+    def _gain_affection(self, amount, reason):
+        """Raise affection (capped), reset the neglect clock, log a bond event.
+        Caller holds the lock."""
+        before = self.state["affection"]
+        self.state["affection"] = min(AFFECTION_MAX, before + amount)
+        self._touch_attention()
+        self.log_event("bond", affection=round(self.state["affection"], 1),
+                       delta=round(self.state["affection"] - before, 2), reason=reason)
+
     def pet(self):
         with self._lock:
-            self.state["affection"] = min(100, self.state["affection"] + 2)
+            self._gain_affection(2, "pet")
             self._observe("the human petted me")
         self.say("pet", {})
 
     def feed(self):
         with self._lock:
-            self.state["affection"] = min(100, self.state["affection"] + 1)
+            self._gain_affection(1, "feed")
             self._observe("the human fed me")
         self.say("fed", {})
 
     def console(self):
         with self._lock:
-            self.state["affection"] = min(100, self.state["affection"] + 3)
+            self._gain_affection(3, "console")
             self._observe("the human comforted me when i was scared")
         self.say("consoled", {})
 
@@ -648,10 +839,26 @@ class Cat:
         with self._lock:
             return self.state.get("affection", 0)
 
+    def idle_hours(self):
+        """Hours since the last genuine attention event (pet/feed/console/quiz).
+        Drives bond decay and the Phase-4 neglect trigger. 0 if never recorded."""
+        with self._lock:
+            la = float(self.state.get("last_attention", 0.0) or 0.0)
+        return 0.0 if la <= 0.0 else max(0.0, (time.time() - la) / 3600.0)
+
     def set_drives(self, drives):
         """Persist the brain's numeric drives so they survive a restart."""
         with self._lock:
             self.state["drives"] = drives
+
+    def set_mood(self, mood):
+        """Mirror the brain's live mood into the persisted state. Without this the
+        top-level `mood` field stayed at its "content" default forever, so the
+        dashboard, the LLM voice prompt, and memory recall (FIELD_WEIGHTS["mood"]
+        = 0.30) all keyed off a dead constant. Now it tracks the real drive state."""
+        if mood:
+            with self._lock:
+                self.state["mood"] = mood
 
     def get_drives(self):
         with self._lock:
@@ -695,20 +902,33 @@ class Cat:
             q, self._q_ready = self._q_ready, None
             return q
 
+    def _pick_library_q(self, asked):
+        """An unused question from the tagged library (Phase 3), else the inline
+        QUESTIONS stub. Tracks usage by id via the quiz `asked` set + the
+        user_profile keys, so nothing repeats until the bank is exhausted."""
+        unused = [q for q in self.qlib if q["id"] not in asked]
+        pool = unused or self.qlib or [
+            {"id": x["id"], "text": x["text"], "dim": "", "options": x["options"]}
+            for x in QUESTIONS]
+        base = random.choice(pool)
+        return {"id": base["id"], "text": base["text"], "dim": base.get("dim", ""),
+                "options": [dict(o) for o in base["options"]]}
+
     def _build_question(self):
-        """Worker-thread: produce a fresh question, preferring the API so every
-        prompt is unique and learns more, falling back to the static bank."""
+        """Worker-thread: produce a fresh question. Prefers the API (unique, learns
+        more) when reachable + in budget; otherwise the strong offline path is the
+        tagged library, which teaches her just as well via per-option tags."""
         with self._lock:
             asked = set(self.state.get("quiz", {}).get("asked", []))
-            enabled = self.llm_enabled and self._budget_left()
+            asked |= set(self.state.get("user_profile", {}).keys())
+            enabled = self.llm_enabled and self._budget_left() and self._net_ready()
         q = self._llm_question() if enabled else None
-        if not q:
-            with self._lock:
-                pool = [x for x in QUESTIONS if x["id"] not in asked] or QUESTIONS
-                base = random.choice(pool)
-            q = {"id": base["id"], "text": base["text"],
-                 "options": [dict(o) for o in base["options"]]}
         with self._lock:
+            if not q:
+                q = self._pick_library_q(asked)
+                self._metrics["q_local"] += 1     # offline/library question
+            else:
+                self._metrics["q_api"] += 1        # fresh API question
             self._q_ready = q
             self._q_pending = False
 
@@ -754,23 +974,33 @@ class Cat:
             opts = q.get("options", [])
             if not (0 <= choice_idx < len(opts)):
                 return None
-            label = opts[choice_idx].get("label", "")
+            chosen = opts[choice_idx]
+            label = chosen.get("label", "")
             qz = self.state.setdefault("quiz", {"last_t": 0, "asked": [], "recent_q": []})
             qz["last_t"] = time.time()
             if q["id"] not in qz.setdefault("asked", []):
                 qz["asked"].append(q["id"])
             qz.setdefault("recent_q", []).append(q["text"])
             del qz["recent_q"][:-12]
+            # store structured prefs alongside the raw answer so offline learning
+            # is lossless: behavior_hints reads these directly (keyword extraction
+            # becomes a fallback only for untagged API questions).
+            prefs = {k: v for k, v in (chosen.get("prefs") or {}).items()
+                     if k in PREF_KEYS}
             self.state.setdefault("user_profile", {})[q["id"]] = {
-                "q": q["text"], "a": label, "ts": int(time.time())}
-            # nudge personality traits if the option carries them (static bank)
-            for tr, sign in (opts[choice_idx].get("traits") or {}).items():
+                "q": q["text"], "a": label, "ts": int(time.time()), "prefs": prefs}
+            # nudge personality traits if the option carries them (tagged bank)
+            for tr, sign in (chosen.get("traits") or {}).items():
                 if tr in self.state["traits"]:
                     v = self.state["traits"][tr] + TRAIT_NUDGE * sign
                     self.state["traits"][tr] = max(0.0, min(1.0, v))
-            self.state["affection"] = min(100, self.state.get("affection", 0) + 1)
+            self._gain_affection(1, "quiz")
             self._observe(f"human told me: {q['text']} -> {label}")
-            self._merge_fact("temperament", f"human likes {label}")
+            # crystallize the tagged fact if present, else a generic impression
+            self._merge_fact("temperament", chosen.get("fact") or f"human likes {label}")
+        # grow the offline bank from fresh API questions (id starts with "api_")
+        if str(q.get("id", "")).startswith("api_"):
+            self._append_learned_q(q)
         self.save()
         return f"ooh, {label}! noted ~"
 
@@ -797,13 +1027,19 @@ class Cat:
             facts = self.state.get("user_facts", []) or []
             items = [v for v in profile.values() if isinstance(v, dict)]
             items.sort(key=lambda v: v.get("ts", 0))
-            prefs = {"chattiness": None, "comfort_style": None,
-                     "chronotype": None, "pace": None}
+            prefs = {k: None for k in PREF_KEYS}
             for v in items:
-                ans = _pref_extract(str(v.get("a", "")).lower())   # answer wins
-                que = _pref_extract(str(v.get("q", "")).lower())   # then question
+                # structured tags (from the library) are decisive; keyword
+                # extraction of answer/question text is the fallback for untagged
+                # API questions. later answers (by ts) override earlier ones.
+                tagged = {k: val for k, val in (v.get("prefs") or {}).items()
+                          if k in prefs}
+                ans = _pref_extract(str(v.get("a", "")).lower())
+                que = _pref_extract(str(v.get("q", "")).lower())
                 for k in prefs:
-                    if k in ans:
+                    if k in tagged:
+                        prefs[k] = tagged[k]
+                    elif k in ans:
                         prefs[k] = ans[k]
                     elif k in que:
                         prefs[k] = que[k]
@@ -829,7 +1065,11 @@ class Cat:
         # interaction after a restart
         with self._lock:
             last_reflect = self.state["interactions"]
+        next_decay = time.time() + 60
         while True:
+            if time.time() >= next_decay:        # periodic bond decay while running (1b)
+                next_decay = time.time() + 60
+                self._decay_bond()
             with self._lock:
                 item = self._req.popleft() if self._req else None
             if item is None:
@@ -862,7 +1102,7 @@ class Cat:
         qflat = self._ctx_text(event, ctx)
         with self._lock:
             cstruct = self._struct(event, ctx)
-            enabled = self.llm_enabled
+            enabled = self.llm_enabled and self._net_ready()   # Phase 1: skip if offline
             budget = self._budget_left()
             use_local = (not enabled or not budget
                          or random.random() < self._local_prob_ctx(event, cstruct, qflat))
@@ -906,8 +1146,10 @@ class Cat:
         try:
             with self._lock:
                 m = dict(self._metrics)
+                affection = round(float(self.state.get("affection", 0)), 1)
             served = max(m["served"], 1)
             hits = max(m["local_hits"], 1)
+            q_total = max(m["q_local"] + m["q_api"], 1)
             try:
                 allm = json.loads(METRICS.read_text(encoding="utf-8"))
             except Exception:
@@ -919,6 +1161,11 @@ class Cat:
                 "avg_served_sim": round(m["sim_sum"] / hits, 3),
                 "mean_served_reward": round(m["reward_sum"] / hits, 3),
                 "repeat_rate": round(m["repeats"] / served, 3),
+                # Phase 1: how self-sufficient she's been offline today
+                "q_local": m["q_local"], "q_api": m["q_api"],
+                "local_question_rate": round(m["q_local"] / q_total, 3),
+                "offline_flips": m["offline_flips"],
+                "affection": affection,        # bond trajectory (1b) over days
             }
             self._atomic_write(METRICS, json.dumps(allm, indent=2))
         except Exception:
@@ -978,21 +1225,57 @@ class Cat:
         return (f"{m}{extra}{voice} recent: {recent}. "
                 f"reply in <= {MAX_LINE} chars, plain ascii, no quotes.")
 
+    # --- network health (Phase 1) --------------------------------------
+    def _net_ready(self):
+        """Should we attempt a network call? True when online, or when offline but
+        the re-probe cooldown has elapsed (one deliberate retry). Callers gate the
+        API path on this so a dead endpoint isn't hammered every interaction."""
+        with self._lock:
+            return self.online or time.time() >= self._net_probe_at
+
+    def _note_net(self, ok):
+        """Update the online flag from one network outcome (caller holds no lock).
+        Flips deliberately: N consecutive failures -> offline + schedule a probe;
+        any success -> online. Emits a `net` telemetry event on a flip."""
+        flip = None
+        with self._lock:
+            if ok:
+                self._net_fails = 0
+                if not self.online:
+                    self.online = True
+                    flip = True
+            else:
+                self._net_fails += 1
+                self._net_probe_at = time.time() + NET_PROBE_COOLDOWN
+                if self.online and self._net_fails >= NET_FAIL_MAX:
+                    self.online = False
+                    flip = False
+            if flip is not None:
+                self._metrics["offline_flips"] += 1
+        if flip is not None:
+            self.log_event("net", online=flip)
+
     def _post_chat(self, messages, max_tokens, temperature):
         """POST to the OpenAI-compatible endpoint. cfg read under lock; the
-        network call itself runs without the lock held."""
+        network call itself runs without the lock held. Updates the online health
+        flag from the outcome (Phase 1) so we degrade to offline deliberately."""
         with self._lock:
             cfg = dict(self.cfg)
-        body = json.dumps({"model": cfg["model"], "messages": messages,
-                           "max_tokens": max_tokens, "temperature": temperature}).encode()
-        req = urllib.request.Request(
-            cfg["base_url"].rstrip("/") + "/chat/completions",
-            data=body, method="POST",
-            headers={"Content-Type": "application/json",
-                     "Authorization": f"Bearer {cfg['api_key']}",
-                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TabbyMascot/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            data = json.loads(r.read())
+        try:
+            body = json.dumps({"model": cfg["model"], "messages": messages,
+                               "max_tokens": max_tokens, "temperature": temperature}).encode()
+            req = urllib.request.Request(
+                cfg["base_url"].rstrip("/") + "/chat/completions",
+                data=body, method="POST",
+                headers={"Content-Type": "application/json",
+                         "Authorization": f"Bearer {cfg['api_key']}",
+                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TabbyMascot/1.0"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                data = json.loads(r.read())
+        except Exception:
+            self._note_net(False)        # any failure on the network path = unreachable
+            raise
+        self._note_net(True)
         return data["choices"][0]["message"]["content"]
 
     def _llm(self, event, ctx):
@@ -1011,8 +1294,8 @@ class Cat:
     def reflect(self):
         """Occasionally distill recent observations into one durable user-fact."""
         with self._lock:
-            # R2: don't let reflection eat scarce budget
-            if (not self.llm_enabled or not self._budget_left()
+            # R2: don't let reflection eat scarce budget (and skip while offline)
+            if (not self.llm_enabled or not self._budget_left() or not self._net_ready()
                     or self._calls_today() / DAILY_BUDGET > (1 - REFLECT_BUDGET_PCT)
                     or len(self.state["recent"]) < 6):
                 return

@@ -105,6 +105,8 @@ class Brain:
         self.affinity = {}         # behaviour -> learned affinity 0..1 (B2)
         self.trust = TRUST_INIT    # dampens fear spikes (B4)
         self.jumpiness = 0.0       # rises with error storms, amplifies fear (B4)
+        self.last_fear_trigger = None    # cause of the most recent scare (Phase 4)
+        self.last_fear_effective = 0.0   # post-modulation fear delta of that scare
         self.active_hours = [0.0] * 24   # learned user activity histogram (B5/X4)
         self._rhythm_last_ts = time.time()   # last note_activity time, for decay (X4)
         self._last_console_t = 0.0
@@ -239,7 +241,10 @@ class Brain:
             self._set("groom")                  # content, heart-eyes (love sprite)
         return "consoled" if consoled else "petted"
 
-    def scare(self, amount=70.0):
+    def scare(self, amount=70.0, trigger="unknown"):
+        """Spike fear, personality-modulated. `trigger` names the cause (Phase 4:
+        tool_failure/permission/error_storm/neglect/drag/activity_spike) and is
+        recorded on last_fear_* so the mascot can emit a telemetry event."""
         self._reinforce(self.behavior, 0.0)    # got startled mid-behaviour
         # X3: a human who wants quiet when code breaks gets a calmer cat; shy cats
         # spook a little easier. Applied before the existing trust/jumpiness maths.
@@ -248,6 +253,8 @@ class Brain:
         amount = max(0.0, amount * (1.0 + 0.4 * (self._shyness - 0.5)))
         # B4: trust dampens the spike; jumpiness from recent error-storms amplifies it
         effective = amount * (1 - 0.5 * self.trust) * (1 + self.jumpiness)
+        self.last_fear_trigger = trigger
+        self.last_fear_effective = round(effective, 2)
         self.jumpiness = min(1.0, self.jumpiness + 0.25)
         if time.time() - self._last_console_t > 30:
             self.trust = max(0.0, self.trust - 0.03)
@@ -384,8 +391,11 @@ class Brain:
         # urgent drives override free choice
         u = self.urgent_drive()
         if u == "fear":   return "cower"
-        if u == "hunger": return "beg"
-        if u == "social": return "seek"
+        # don't lock on a single urgent sprite: slip a brief sit between repeats so
+        # sustained hunger/loneliness reads as "asks, waits, asks again" rather than
+        # a frozen beg/seek loop (P1).
+        if u == "hunger": return "sit" if self.behavior == "beg" else "beg"
+        if u == "social": return "sit" if self.behavior == "seek" else "seek"
         # genuinely down (post-fright / long-ignored / starving) -> look sad
         if self.valence < 30 and random.random() < 0.6:
             return "sad"
@@ -411,6 +421,7 @@ class Brain:
 
     def _set(self, name):
         b = BEHAVIORS[name]
+        changed = name != self.behavior      # only a real transition counts as usage
         self.behavior = name
         self.frames = b["frames"]
         self.period = b["period"]
@@ -418,8 +429,14 @@ class Brain:
         self._rate = b["energy"]
         self._dur = random.uniform(*b["dur"])
         self._elapsed = 0.0
-        self._behav_hist.append((name, time.time()))        # B6 history
-        self.behavior_counts[name] = self.behavior_counts.get(name, 0) + 1  # usage
+        # Count one usage per *stint*, not per call: callers (e.g. the quiz pump,
+        # cursor glances) re-`_set` the same behaviour every tick, which used to
+        # inflate behavior_counts by thousands and corrupt the dashboard's
+        # repetition flag + affinity learning. behavior_secs (per-tick in tick())
+        # still captures dwell time.
+        if changed:
+            self._behav_hist.append((name, time.time()))    # B6 history
+            self.behavior_counts[name] = self.behavior_counts.get(name, 0) + 1
 
     # --- per-tick update -----------------------------------------------
     def tick(self, dt):

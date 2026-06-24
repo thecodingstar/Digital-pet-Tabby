@@ -15,12 +15,16 @@ unless noted. Background is made transparent via cat4_slice.remove_bg.
 """
 import os
 import numpy as np
+from pathlib import Path
 from PIL import Image
 from scipy import ndimage
 from cat4_slice import remove_bg, ALPHA_TH
 
-SRC = "Gemini_Generated_Image_7jkbv97jkbv97jkb.png"
-OUT = "cat4_states"
+# This slicer lives in tools/; the source sheet + sprite library are at the repo
+# root (parent of tools/), so resolve them there, not from the CWD.
+ROOT = Path(__file__).resolve().parent.parent
+SRC = str(ROOT / "Gemini_Generated_Image_7jkbv97jkbv97jkb.png")
+OUT = str(ROOT / "cat4_states")
 CANVAS = 384
 BOTTOM_MARGIN = 13        # match the existing sprites' foot gap
 PAD = 6
