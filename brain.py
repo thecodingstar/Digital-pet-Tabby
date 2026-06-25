@@ -59,7 +59,7 @@ BEHAVIORS = {
 }
 
 # per-second drift of each drive while no interaction happens
-DRIFT = {"hunger": 0.12, "social": 0.08, "fear": -0.6}
+DRIFT = {"hunger": 0.04, "social": 0.08, "fear": -0.6}  # hunger: ~0->urgent in 32min (~2x/hr)
 URGENT = {"fear": 60, "hunger": 78, "social": 72, "tiredness": 78}  # thresholds that take over
 
 # tiredness per-second rate by behaviour: positive = accumulating, negative = recovering
@@ -481,7 +481,7 @@ class Brain:
         self.fear = _clamp(self.fear + DRIFT["fear"] * dt)
         # B3: exertion burns hunger faster; jumpiness fades over time
         if self.behavior in ("zoomies", "play"):
-            self.hunger = _clamp(self.hunger + 0.2 * dt)
+            self.hunger = _clamp(self.hunger + 0.06 * dt)
         self.jumpiness = max(0.0, self.jumpiness - 0.03 * dt)
         # hunger saps energy when severe (drive interdependency)
         if self.hunger > 85:

@@ -9,7 +9,7 @@ Run: python taskbar_mascot_cat.py
 """
 import sys, time, ctypes, ctypes.wintypes, json, os, glob, random
 from pathlib import Path
-from PyQt5.QtWidgets import QApplication, QWidget, QMenu, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QMenu, QPushButton, QHBoxLayout
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import (QPixmap, QPainter, QColor, QFont, QFontMetrics,
                          QPainterPath, QPen, QRegion, QCursor)
@@ -111,6 +111,38 @@ def load_state():
             return json.load(f)
     except Exception:
         return None
+
+
+class ActionBar(QWidget):
+    """Always-visible quick actions (Feed / Pet) anchored just above the cat, so
+    the user can feed/pet in one click without opening the right-click menu."""
+    def __init__(self, on_feed, on_pet):
+        super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                            | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(4)
+        css = ("QPushButton{background:rgba(43,47,58,235);color:#fff;"
+               "border:1px solid #4b5160;border-radius:7px;font-size:13px;}"
+               "QPushButton:hover{background:#3a8a4b;border-color:#7bd88f;}")
+        self.feed_btn = QPushButton("\U0001F357")    # 🍗
+        self.pet_btn = QPushButton("✋")          # ✋
+        for b, cb, tip in ((self.feed_btn, on_feed, "Feed"),
+                           (self.pet_btn, on_pet, "Pet")):
+            b.setFixedSize(28, 24)
+            b.setStyleSheet(css)
+            b.setToolTip(tip)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.NoFocus)
+            b.clicked.connect(cb)
+            lay.addWidget(b)
+        self.adjustSize()
+
+    def place(self, cx, bottom_y):
+        self.move(int(cx - self.width() / 2), int(bottom_y - self.height()))
 
 
 class SpeechBubble(QWidget):
@@ -387,6 +419,7 @@ class Mascot(QWidget):
         self.bubble = SpeechBubble()
         self.info = InfoPanel()
         self.qbubble = QuestionBubble(self._on_quiz_answer)   # interactive quiz (C)
+        self.actionbar = ActionBar(self._do_feed, self._do_pet)   # one-click feed/pet
         self.next_quiz_check = time.time() + 60               # first check after 1 min
         # loose Claude coupling: she follows your work only when she chooses to
         self._watching = False
@@ -514,6 +547,14 @@ class Mascot(QWidget):
     DRAG_DEADZONE = 6        # px of movement before a press becomes a drag
     FAST_DRAG_PXPS = 1300    # drag faster than this startles her (Phase 4)
 
+    def _do_feed(self):
+        """Feed her: clears hunger, bumps energy, rewards the last behaviour."""
+        self.brain.feed()
+        self.cat.feed()
+        self.cat.report_outcome(1.0)
+        self.last_say = 0
+        self.update()
+
     def _do_pet(self):
         """A genuine click (not a drag) = pet, or console if she's scared."""
         res = self.brain.receive_pet()
@@ -617,12 +658,9 @@ class Mascot(QWidget):
         elif act == a_stats:
             self._open_dashboard()
         elif act == a_feed:
-            self.brain.feed(); self.cat.feed(); self.cat.report_outcome(1.0)
-            self.last_say = 0
+            self._do_feed()
         elif act == a_pet:
-            res = self.brain.receive_pet()
-            self.cat.console() if res == "consoled" else self.cat.pet()
-            self.cat.report_outcome(1.0); self.last_say = 0
+            self._do_pet()
         elif act == a_sleep:
             self.brain.force_sleep(); self.cat.say("sleep"); self.last_say = 0
         elif act == a_quit:
@@ -814,6 +852,15 @@ class Mascot(QWidget):
         elif self.bubble.isVisible():
             self.bubble.move(int(self.x + DISP / 2 - self.bubble.width() / 2),
                              self.bubble.y())
+
+        # quick-action bar rides just above her head; hidden while a quiz card
+        # pins her (avoids overlap / accidental clicks).
+        if self.qbubble.q is None:
+            self.actionbar.place(self.x + DISP / 2, self.y() - 2)
+            if not self.actionbar.isVisible():
+                self.actionbar.show()
+        elif self.actionbar.isVisible():
+            self.actionbar.hide()
 
         # hover panel: what she's doing + drives + bond
         if self.hovering:
