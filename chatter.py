@@ -277,6 +277,36 @@ def _pref_extract(txt):
         d["pace"] = "slow"
     return d
 
+
+def _infer_tags(q_text, a_text):
+    """Untagged API questions return bare {label} options — no traits/prefs — so
+    answering them never trained the brain (only comfort_style leaked through via
+    behavior_hints' keyword fallback, and traits never moved). Recover BOTH a
+    structured pref bag and complementary trait nudges from the answer (+question)
+    text, so an API answer teaches the brain like a tagged library answer does.
+    Returns (prefs, trait_nudges); both empty when nothing matched (safe = neutral)."""
+    a = str(a_text).lower()
+    # prefs: best-effort over answer + question (lossy, mirrors behavior_hints).
+    prefs = {k: v for k, v in _pref_extract(a + " " + str(q_text).lower()).items()
+             if k in PREF_KEYS}
+    # traits: derive ONLY from what the answer itself asserts, so the question's
+    # wording (which names both choices) can't bleed a contradictory nudge.
+    ap = _pref_extract(a)
+    tr = {}
+    ch = ap.get("chattiness")
+    if ch is not None:                         # chatty -> playful, chill -> shy
+        tr["playfulness" if ch > 0 else "shyness"] = +1
+    cs = ap.get("comfort_style")
+    if cs == "cheer":
+        tr["playfulness"] = +1
+    elif cs == "space":
+        tr["shyness"] = +1
+    if ap.get("pace") == "fast":               # fast pace -> a more curious cat
+        tr["curiosity"] = +1
+    if "sass" in a or "cat person" in a:
+        tr["sass"] = +1
+    return prefs, tr
+
 # canned fallback lines, used when no LLM is configured/reachable
 CANNED = {
     "pet":            ["*purrs*", "mrrp <3", "more pets pls", "*leans in*", "prrr~"],
@@ -1028,10 +1058,17 @@ class Cat:
             # becomes a fallback only for untagged API questions).
             prefs = {k: v for k, v in (chosen.get("prefs") or {}).items()
                      if k in PREF_KEYS}
+            # untagged API question: recover prefs + trait nudges from the text so
+            # it trains the brain instead of just decorating her voice (X1 fix).
+            inferred_traits = {}
+            if not prefs and not (chosen.get("traits")):
+                prefs, inferred_traits = _infer_tags(q["text"], label)
             self.state.setdefault("user_profile", {})[q["id"]] = {
                 "q": q["text"], "a": label, "ts": int(time.time()), "prefs": prefs}
-            # nudge personality traits if the option carries them (tagged bank)
-            for tr, sign in (chosen.get("traits") or {}).items():
+            # nudge personality traits from the option's tags, or the inferred set
+            trait_src = dict(chosen.get("traits") or {})
+            trait_src.update(inferred_traits)
+            for tr, sign in trait_src.items():
                 if tr in self.state["traits"]:
                     v = self.state["traits"][tr] + TRAIT_NUDGE * sign
                     self.state["traits"][tr] = max(0.0, min(1.0, v))

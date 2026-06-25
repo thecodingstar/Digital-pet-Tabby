@@ -76,6 +76,22 @@ log-on-change heartbeat, rotation) → `analyze_telemetry.py` roll-up + dashboar
 section → on-demand `/analyze-cat` review into `docs/IMPROVEMENT_PLAN.md`. Built on
 the Phase-0 fields that 1b/4 already emit.
 
+## Phase 7 — Close the quiz→brain loop (X1 follow-up)
+The quiz feeds her *voice* well but barely her *behaviour*: online she asks
+untagged API questions, and the brain consumes only `comfort_style` out of all
+`PREF_KEYS`. See `docs/IMPROVEMENT_PLAN.md` (2026-06-25 quiz-tagging entry).
+1. **Tag API answers** ☑ — `_infer_tags` recovers prefs + trait nudges from answer
+   text on `answer_question`, so online answers move traits like library answers.
+2. **Consume more prefs in the brain** ☐ — wire the collected-but-ignored dims:
+   `chronotype` seeds `active_hours`/anticipation; `pace` scales musing + zoomies
+   cadence; `social_energy` biases `seek`/`watch`. Each: add to `apply_hints` +
+   one selection/cadence hook, keep `apply_hints({})` a neutral identity.
+3. **Prefer the tagged library when online too** ☐ — or post-classify API answers
+   into a known dimension, so trait/pref coverage isn't left to keyword luck.
+- **Verify:** `sim_harness.py` — answering API-shaped questions moves traits +
+  stores structured prefs; each newly-wired pref shifts the intended behaviour
+  weight; cold start (no answers) stays neutral.
+
 ---
 
 ## Verification
