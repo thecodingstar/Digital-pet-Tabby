@@ -123,23 +123,38 @@ class ActionBar(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(4)
-        css = ("QPushButton{background:rgba(43,47,58,235);color:#fff;"
-               "border:1px solid #4b5160;border-radius:7px;font-size:13px;}"
-               "QPushButton:hover{background:#3a8a4b;border-color:#7bd88f;}")
-        self.feed_btn = QPushButton("\U0001F357")    # 🍗
-        self.pet_btn = QPushButton("✋")          # ✋
-        for b, cb, tip in ((self.feed_btn, on_feed, "Feed"),
-                           (self.pet_btn, on_pet, "Pet")):
-            b.setFixedSize(28, 24)
-            b.setStyleSheet(css)
+        lay.setContentsMargins(2, 2, 2, 2)
+        lay.setSpacing(8)
+        # base pill + a per-button hover accent (feed = warm green, pet = pink)
+        base = ("QPushButton{background:rgba(38,42,52,238);color:#f3f4f6;"
+                "border:1px solid #50566a;border-radius:10px;"
+                "padding:7px 16px;font-size:14px;font-weight:600;}")
+        self.feed_btn = QPushButton("\U0001F357  Feed")    # 🍗
+        self.pet_btn = QPushButton("✋  Pet")              # ✋
+        accents = {self.feed_btn: ("#3a8a4b", "#7bd88f"),
+                   self.pet_btn: ("#9c5bd1", "#d2a8f0")}
+        for b, cb, tip in ((self.feed_btn, on_feed, "Feed her (clears hunger)"),
+                           (self.pet_btn, on_pet, "Pet her")):
+            bg, border = accents[b]
+            b.setStyleSheet(base + "QPushButton:hover{background:%s;border-color:%s;}"
+                            "QPushButton:pressed{padding-top:8px;padding-bottom:6px;}"
+                            % (bg, border))
+            b.setFixedHeight(34)
+            b.setMinimumWidth(78)
             b.setToolTip(tip)
             b.setCursor(Qt.PointingHandCursor)
             b.setFocusPolicy(Qt.NoFocus)
             b.clicked.connect(cb)
             lay.addWidget(b)
         self.adjustSize()
+
+    def update_needs(self, feed, pet):
+        """Show only the buttons she currently needs; return True if any shown."""
+        self.feed_btn.setVisible(feed)
+        self.pet_btn.setVisible(pet)
+        if feed or pet:
+            self.adjustSize()
+        return feed or pet
 
     def place(self, cx, bottom_y):
         self.move(int(cx - self.width() / 2), int(bottom_y - self.height()))
@@ -853,9 +868,12 @@ class Mascot(QWidget):
             self.bubble.move(int(self.x + DISP / 2 - self.bubble.width() / 2),
                              self.bubble.y())
 
-        # quick-action bar rides just above her head; hidden while a quiz card
-        # pins her (avoids overlap / accidental clicks).
-        if self.qbubble.q is None:
+        # quick-action bar: surfaces a button only when she actually needs that
+        # care (hungry -> Feed, lonely/scared -> Pet), so it's not always up.
+        # Hidden entirely while a quiz card pins her.
+        feed_need = self.brain.hunger > 60
+        pet_need = self.brain.social > 60 or self.brain.fear > 30
+        if self.qbubble.q is None and self.actionbar.update_needs(feed_need, pet_need):
             self.actionbar.place(self.x + DISP / 2, self.y() - 2)
             if not self.actionbar.isVisible():
                 self.actionbar.show()
