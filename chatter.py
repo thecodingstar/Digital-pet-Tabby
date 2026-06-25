@@ -286,22 +286,25 @@ def _infer_tags(q_text, a_text):
     text, so an API answer teaches the brain like a tagged library answer does.
     Returns (prefs, trait_nudges); both empty when nothing matched (safe = neutral)."""
     a = str(a_text).lower()
-    # prefs: best-effort over answer + question (lossy, mirrors behavior_hints).
-    prefs = {k: v for k, v in _pref_extract(a + " " + str(q_text).lower()).items()
-             if k in PREF_KEYS}
-    # traits: derive ONLY from what the answer itself asserts, so the question's
-    # wording (which names both choices) can't bleed a contradictory nudge.
-    ap = _pref_extract(a)
+    ans = _pref_extract(a)
+    que = _pref_extract(str(q_text).lower())
+    # prefs: the ANSWER is decisive; the question only fills keys the answer didn't
+    # match. A binary "X or Y" question names BOTH antonyms, and _pref_extract's
+    # if/elif picks the first-listed pole regardless of choice — so question-derived
+    # prefs alone would store the OPPOSITE of what the user picked. Same answer-only
+    # discipline the trait nudges below rely on.
+    prefs = {k: v for k, v in {**que, **ans}.items() if k in PREF_KEYS}
+    # traits: derive ONLY from what the answer itself asserts (same reason).
     tr = {}
-    ch = ap.get("chattiness")
+    ch = ans.get("chattiness")
     if ch is not None:                         # chatty -> playful, chill -> shy
         tr["playfulness" if ch > 0 else "shyness"] = +1
-    cs = ap.get("comfort_style")
+    cs = ans.get("comfort_style")
     if cs == "cheer":
         tr["playfulness"] = +1
     elif cs == "space":
         tr["shyness"] = +1
-    if ap.get("pace") == "fast":               # fast pace -> a more curious cat
+    if ans.get("pace") == "fast":              # fast pace -> a more curious cat
         tr["curiosity"] = +1
     if "sass" in a or "cat person" in a:
         tr["sass"] = +1
