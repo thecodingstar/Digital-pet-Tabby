@@ -49,3 +49,6 @@ graphify-out/
 
 # --- archived experiments / scratch (kept locally, not in git) ---
 archive/
+
+# transfer archive of already-tracked sprites
+cat4_states.zip
