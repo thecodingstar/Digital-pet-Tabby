@@ -52,3 +52,6 @@ archive/
 
 # transfer archive of already-tracked sprites
 cat4_states.zip
+
+# Claude Code local settings
+.claude/settings.local.json
